@@ -8,7 +8,8 @@ export type ApiHealthResponse = {
 };
 
 export type TranscodeJobPayload = {
-  videoAssetId: string;
-  sourceS3Key: string;
-  outputPrefix: string;
+  titleId: string;
+  episodeId?: string;
+  s3Key: string;
+  type: "movie" | "episode";
 };

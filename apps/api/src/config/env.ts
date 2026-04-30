@@ -9,7 +9,13 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32).optional(),
   PASSWORD_PEPPER: z.string().min(32).optional(),
   ACCESS_TOKEN_TTL: z.string().default("15m"),
-  REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 30)
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 30),
+  AWS_REGION: z.string().default("us-east-1"),
+  AWS_ACCESS_KEY_ID: z.string().optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_S3_BUCKET: z.string().default("movth-dev-media"),
+  CLOUDFRONT_DOMAIN: z.string().url().default("https://cdn.example.com"),
+  TRANSCODE_QUEUE_NAME: z.string().default("transcode")
 });
 
 const parsedEnv = envSchema.parse(process.env);

@@ -10,6 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1039.0",
+    "@aws-sdk/lib-storage": "^3.1039.0",
+    "@aws-sdk/s3-request-presigner": "^3.1039.0",
     "@movth/db": "file:../../packages/db",
     "@movth/types": "file:../../packages/types",
     "bullmq": "^5.34.2",
