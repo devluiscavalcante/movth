@@ -13,6 +13,7 @@ import { authRoutes } from "./routes/auth.js";
 import { catalogRoutes } from "./routes/catalog.js";
 import { profileRoutes } from "./routes/profiles.js";
 import { subscriptionRoutes } from "./routes/subscriptions.js";
+import { watchRoutes } from "./routes/watch.js";
 
 export function buildApp() {
   const app = Fastify({
@@ -115,6 +116,7 @@ export function buildApp() {
   app.register(adminCatalogRoutes, { prefix: "/admin" });
   app.register(adminUploadRoutes, { prefix: "/admin" });
   app.register(subscriptionRoutes, { prefix: "/subscription" });
+  app.register(watchRoutes);
 
   return app;
 }
