@@ -65,8 +65,11 @@ services:
     container_name: movth-web
     restart: unless-stopped
     environment:
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
       NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL:-http://localhost:3000}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://backend:4000}
     ports:
       - "3000:3000"
     depends_on:
