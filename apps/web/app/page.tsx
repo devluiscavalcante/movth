@@ -1,23 +1,27 @@
-export default function HomePage() {
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { LogoutButton } from "./components/LogoutButton";
+import { PROFILE_COOKIE, requireUser } from "./lib/session";
+
+export default async function HomePage() {
+  const user = await requireUser();
+  const profileId = cookies().get(PROFILE_COOKIE)?.value;
+
+  if (!profileId) {
+    redirect("/profiles");
+  }
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
-        padding: 24
-      }}
-    >
-      <section style={{ width: "min(960px, 100%)" }}>
-        <p style={{ margin: 0, color: "var(--accent)", fontWeight: 700 }}>
-          Movth
-        </p>
-        <h1 style={{ margin: "12px 0", fontSize: 48, lineHeight: 1.05 }}>
-          Fundação da plataforma de streaming
-        </h1>
-        <p style={{ margin: 0, maxWidth: 620, color: "var(--muted)", fontSize: 18 }}>
-          Next.js 14 conectado à base do monorepo. As próximas fases entram em
-          autenticação, catálogo, reprodução HLS, billing e backoffice.
+    <main className="home-page">
+      <nav className="top-nav">
+        <p className="brand-mark">Movth</p>
+        <LogoutButton />
+      </nav>
+      <section className="home-hero">
+        <p className="eyebrow">Conta ativa</p>
+        <h1>Catalogo e player entram na proxima etapa.</h1>
+        <p>
+          Usuario: {user.email}. Perfil selecionado: {profileId}.
         </p>
       </section>
     </main>
