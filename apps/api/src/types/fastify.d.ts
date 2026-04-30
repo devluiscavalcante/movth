@@ -6,5 +6,6 @@ declare module "fastify" {
       userId: string;
       email: string;
     };
+    rawBody?: Buffer;
   }
 }

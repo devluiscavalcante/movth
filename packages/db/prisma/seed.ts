@@ -23,35 +23,44 @@ async function main() {
   const [basic, standard, premium] = await Promise.all([
     prisma.plan.upsert({
       where: { name: "Basic" },
-      update: {},
+      update: {
+        stripePriceId: "price_movth_basic"
+      },
       create: {
         name: "Basic",
         maxProfiles: 2,
         maxStreams: 1,
         has4k: false,
-        priceCents: 1990
+        priceCents: 1990,
+        stripePriceId: "price_movth_basic"
       }
     }),
     prisma.plan.upsert({
       where: { name: "Standard" },
-      update: {},
+      update: {
+        stripePriceId: "price_movth_standard"
+      },
       create: {
         name: "Standard",
         maxProfiles: 4,
         maxStreams: 2,
         has4k: false,
-        priceCents: 3290
+        priceCents: 3290,
+        stripePriceId: "price_movth_standard"
       }
     }),
     prisma.plan.upsert({
       where: { name: "Premium" },
-      update: {},
+      update: {
+        stripePriceId: "price_movth_premium"
+      },
       create: {
         name: "Premium",
         maxProfiles: 6,
         maxStreams: 4,
         has4k: true,
-        priceCents: 4990
+        priceCents: 4990,
+        stripePriceId: "price_movth_premium"
       }
     })
   ]);

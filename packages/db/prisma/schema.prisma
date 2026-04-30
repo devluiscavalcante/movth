@@ -54,6 +54,7 @@ model User {
   passwordHash   String          @map("password_hash")
   role           UserRole        @default(USER)
   planId         String?         @map("plan_id") @db.Uuid
+  stripeCustomerId String?       @unique @map("stripe_customer_id")
   trialEndsAt    DateTime?       @map("trial_ends_at") @db.Timestamptz(6)
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -74,10 +75,12 @@ model Plan {
   maxStreams  Int      @map("max_streams")
   has4k       Boolean  @default(false) @map("has_4k")
   priceCents  Int      @map("price_cents")
+  stripePriceId String? @unique @map("stripe_price_id")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   users       User[]
+  subscriptions Subscription[]
 
   @@map("plans")
 }
@@ -228,6 +231,8 @@ model Watchlist {
 model Subscription {
   id                 String             @id @default(uuid()) @db.Uuid
   userId             String             @map("user_id") @db.Uuid
+  planId             String?            @map("plan_id") @db.Uuid
+  stripeCustomerId   String             @map("stripe_customer_id")
   stripeSubId        String             @unique @map("stripe_sub_id")
   status             SubscriptionStatus
   currentPeriodEnd   DateTime           @map("current_period_end") @db.Timestamptz(6)
@@ -235,8 +240,11 @@ model Subscription {
   updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan               Plan?              @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([planId])
+  @@index([stripeCustomerId])
   @@index([status])
   @@index([currentPeriodEnd])
   @@map("subscriptions")

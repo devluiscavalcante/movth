@@ -12,13 +12,31 @@ import { adminUploadRoutes } from "./routes/admin-upload.js";
 import { authRoutes } from "./routes/auth.js";
 import { catalogRoutes } from "./routes/catalog.js";
 import { profileRoutes } from "./routes/profiles.js";
+import { subscriptionRoutes } from "./routes/subscriptions.js";
 
 export function buildApp() {
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "production" ? "info" : "debug"
-    }
+    },
+    bodyLimit: 1024 * 1024
   });
+
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (request, body, done) => {
+      if (request.url === "/subscription/webhook") {
+        request.rawBody = Buffer.isBuffer(body) ? body : Buffer.from(body);
+      }
+
+      try {
+        done(null, JSON.parse(body.toString("utf8")));
+      } catch (error) {
+        done(error as Error);
+      }
+    }
+  );
 
   app.register(helmet);
   app.register(cors, {
@@ -96,6 +114,7 @@ export function buildApp() {
   app.register(catalogRoutes);
   app.register(adminCatalogRoutes, { prefix: "/admin" });
   app.register(adminUploadRoutes, { prefix: "/admin" });
+  app.register(subscriptionRoutes, { prefix: "/subscription" });
 
   return app;
 }

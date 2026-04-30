@@ -15,7 +15,10 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_S3_BUCKET: z.string().default("movth-dev-media"),
   CLOUDFRONT_DOMAIN: z.string().url().default("https://cdn.example.com"),
-  TRANSCODE_QUEUE_NAME: z.string().default("transcode")
+  TRANSCODE_QUEUE_NAME: z.string().default("transcode"),
+  STRIPE_SECRET_KEY: z.string().default("sk_test_replace_me"),
+  STRIPE_WEBHOOK_SECRET: z.string().default("whsec_replace_me"),
+  WEB_URL: z.string().url().default("http://localhost:3000")
 });
 
 const parsedEnv = envSchema.parse(process.env);
