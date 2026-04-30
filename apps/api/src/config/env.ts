@@ -7,7 +7,16 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   JWT_SECRET: z.string().min(32).optional(),
-  PASSWORD_PEPPER: z.string().min(32).optional()
+  PASSWORD_PEPPER: z.string().min(32).optional(),
+  ACCESS_TOKEN_TTL: z.string().default("15m"),
+  REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 30)
 });
 
-export const env = envSchema.parse(process.env);
+const parsedEnv = envSchema.parse(process.env);
+
+export const env = {
+  ...parsedEnv,
+  JWT_SECRET:
+    parsedEnv.JWT_SECRET ??
+    "movth-development-jwt-secret-change-before-production"
+};

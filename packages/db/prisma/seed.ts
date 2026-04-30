@@ -1,13 +1,18 @@
 import { PrismaClient, TitleType, VideoAssetStatus, VideoQuality } from "@prisma/client";
-import { createHash } from "node:crypto";
+import { hash } from "@node-rs/argon2";
 
 const prisma = new PrismaClient();
 
-function hashForSeed(value: string) {
-  return createHash("sha256").update(value).digest("hex");
+function passwordForSeed(value: string) {
+  return hash(value, {
+    memoryCost: 19456,
+    timeCost: 2,
+    parallelism: 1
+  });
 }
 
 async function main() {
+  const adminPasswordHash = await passwordForSeed("movth-admin-password");
   const [basic, standard, premium] = await Promise.all([
     prisma.plan.upsert({
       where: { name: "Basic" },
@@ -47,11 +52,12 @@ async function main() {
   await prisma.user.upsert({
     where: { email: "admin@movth.test" },
     update: {
-      planId: premium.id
+      planId: premium.id,
+      passwordHash: adminPasswordHash
     },
     create: {
       email: "admin@movth.test",
-      passwordHash: hashForSeed("movth-admin-password"),
+      passwordHash: adminPasswordHash,
       planId: premium.id,
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       profiles: {

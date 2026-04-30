@@ -12,8 +12,11 @@
   "dependencies": {
     "@fastify/cors": "^10.0.1",
     "@fastify/helmet": "^12.0.1",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@movth/db": "file:../../packages/db",
     "@movth/types": "file:../../packages/types",
+    "@node-rs/argon2": "^2.0.2",
     "fastify": "^5.1.0",
     "ioredis": "^5.4.1",
     "zod": "^3.24.1"
