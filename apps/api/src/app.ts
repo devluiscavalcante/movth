@@ -11,6 +11,7 @@ import { adminCatalogRoutes } from "./routes/admin-catalog.js";
 import { adminUploadRoutes } from "./routes/admin-upload.js";
 import { authRoutes } from "./routes/auth.js";
 import { catalogRoutes } from "./routes/catalog.js";
+import { engagementRoutes } from "./routes/engagement.js";
 import { profileRoutes } from "./routes/profiles.js";
 import { subscriptionRoutes } from "./routes/subscriptions.js";
 import { watchRoutes } from "./routes/watch.js";
@@ -113,6 +114,7 @@ export function buildApp() {
   app.register(authRoutes, { prefix: "/auth" });
   app.register(profileRoutes, { prefix: "/profiles" });
   app.register(catalogRoutes);
+  app.register(engagementRoutes);
   app.register(adminCatalogRoutes, { prefix: "/admin" });
   app.register(adminUploadRoutes, { prefix: "/admin" });
   app.register(subscriptionRoutes, { prefix: "/subscription" });
