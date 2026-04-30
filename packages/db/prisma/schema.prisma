@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+enum TitleType {
+  MOVIE
+  SERIES
+}
+
+enum VideoQuality {
+  SD
+  HD
+  FULL_HD
+  UHD_4K
+}
+
+enum VideoAssetStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+model User {
+  id             String          @id @default(uuid()) @db.Uuid
+  email          String          @unique
+  passwordHash   String          @map("password_hash")
+  planId         String?         @map("plan_id") @db.Uuid
+  trialEndsAt    DateTime?       @map("trial_ends_at") @db.Timestamptz(6)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  plan           Plan?           @relation(fields: [planId], references: [id], onDelete: SetNull)
+  profiles       Profile[]
+  subscriptions  Subscription[]
+  activeSessions ActiveSession[]
+
+  @@index([planId])
+  @@map("users")
+}
+
+model Plan {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  maxProfiles Int      @map("max_profiles")
+  maxStreams  Int      @map("max_streams")
+  has4k       Boolean  @default(false) @map("has_4k")
+  priceCents  Int      @map("price_cents")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  users       User[]
+
+  @@map("plans")
+}
+
+model Profile {
+  id           String         @id @default(uuid()) @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  name         String
+  avatarUrl    String?        @map("avatar_url")
+  isKids       Boolean        @default(false) @map("is_kids")
+  pinHash      String?        @map("pin_hash")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  watchHistory WatchHistory[]
+  watchlist    Watchlist[]
+
+  @@index([userId])
+  @@unique([userId, name])
+  @@map("profiles")
+}
+
+model Title {
+  id           String         @id @default(uuid()) @db.Uuid
+  type         TitleType
+  title        String
+  synopsis     String
+  releaseYear  Int            @map("release_year")
+  rating       String
+  tmdbId       Int?           @unique @map("tmdb_id")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  episodes     Episode[]
+  videoAssets  VideoAsset[]
+  watchHistory WatchHistory[]
+  watchlist    Watchlist[]
+
+  @@index([type])
+  @@index([releaseYear])
+  @@index([title])
+  @@map("titles")
+}
+
+model Episode {
+  id           String         @id @default(uuid()) @db.Uuid
+  titleId      String         @map("title_id") @db.Uuid
+  season       Int
+  number       Int
+  durationS    Int            @map("duration_s")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  title        Title          @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  videoAssets  VideoAsset[]
+  watchHistory WatchHistory[]
+
+  @@index([titleId])
+  @@unique([titleId, season, number])
+  @@map("episodes")
+}
+
+model VideoAsset {
+  id             String           @id @default(uuid()) @db.Uuid
+  titleId        String           @map("title_id") @db.Uuid
+  episodeId      String?          @map("episode_id") @db.Uuid
+  quality        VideoQuality
+  hlsManifestUrl String           @map("hls_manifest_url")
+  status         VideoAssetStatus @default(PENDING)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  title          Title            @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  episode        Episode?         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([titleId])
+  @@index([episodeId])
+  @@index([status])
+  @@unique([titleId, episodeId, quality])
+  @@map("video_assets")
+}
+
+model WatchHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  profileId  String   @map("profile_id") @db.Uuid
+  titleId    String   @map("title_id") @db.Uuid
+  episodeId  String?  @map("episode_id") @db.Uuid
+  positionS  Int      @default(0) @map("position_s")
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title      Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  episode    Episode? @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, updatedAt])
+  @@index([titleId])
+  @@index([episodeId])
+  @@unique([profileId, titleId, episodeId])
+  @@map("watch_history")
+}
+
+model Watchlist {
+  profileId String   @map("profile_id") @db.Uuid
+  titleId   String   @map("title_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, titleId])
+  @@index([titleId])
+  @@map("watchlist")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid()) @db.Uuid
+  userId             String             @map("user_id") @db.Uuid
+  stripeSubId        String             @unique @map("stripe_sub_id")
+  status             SubscriptionStatus
+  currentPeriodEnd   DateTime           @map("current_period_end") @db.Timestamptz(6)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@map("subscriptions")
+}
+
+model ActiveSession {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  deviceType String   @map("device_type")
+  ipAddress  String   @map("ip_address")
+  lastSeen   DateTime @default(now()) @map("last_seen") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lastSeen])
+  @@map("active_sessions")
+}

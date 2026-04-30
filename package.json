@@ -1,0 +1,28 @@
+{
+  "name": "movth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Movth streaming platform monorepo",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck -w @movth/types && npm run typecheck -w @movth/db && npm run build -w @movth/types && npm run build -w @movth/db && npm run typecheck -w @movth/api && npm run typecheck -w @movth/web && npm run typecheck -w @movth/worker",
+    "db:generate": "npm run db:generate -w @movth/db",
+    "db:migrate": "npm run db:migrate -w @movth/db",
+    "db:seed": "npm run db:seed -w @movth/db"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "prisma": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
