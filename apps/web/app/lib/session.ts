@@ -37,6 +37,58 @@ export type Profile = {
   hasPin: boolean;
 };
 
+export type Genre = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type TitleAsset = {
+  id: string;
+  quality: string;
+  status: string;
+  thumbnailUrl: string | null;
+};
+
+export type Title = {
+  id: string;
+  type: "MOVIE" | "SERIES";
+  status?: string;
+  title: string;
+  synopsis: string;
+  releaseYear: number;
+  rating: string;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  tmdbId?: number | null;
+  genres: Genre[];
+  assets?: TitleAsset[];
+};
+
+export type WatchHistoryItem = {
+  id: string;
+  profileId: string;
+  titleId: string;
+  episodeId: string | null;
+  positionS: number;
+  completed: boolean;
+  updatedAt: string;
+  title: Title;
+  episode: {
+    id: string;
+    season: number;
+    number: number;
+    durationS: number;
+  } | null;
+};
+
+export type WatchlistItem = {
+  profileId: string;
+  titleId: string;
+  createdAt: string;
+  title: Title;
+};
+
 export function apiBaseUrl() {
   return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
