@@ -21,10 +21,12 @@ function publicUser(user: {
   email: string;
   trialEndsAt: Date | null;
   plan: { id: string; name: string; maxProfiles: number; maxStreams: number; has4k: boolean } | null;
+  role?: string;
 }) {
   return {
     id: user.id,
     email: user.email,
+    role: user.role,
     trialEndsAt: user.trialEndsAt,
     plan: user.plan
   };

@@ -1,4 +1,11 @@
-import { PrismaClient, TitleType, VideoAssetStatus, VideoQuality } from "@prisma/client";
+import {
+  PrismaClient,
+  TitleStatus,
+  TitleType,
+  UserRole,
+  VideoAssetStatus,
+  VideoQuality
+} from "@prisma/client";
 import { hash } from "@node-rs/argon2";
 
 const prisma = new PrismaClient();
@@ -53,11 +60,13 @@ async function main() {
     where: { email: "admin@movth.test" },
     update: {
       planId: premium.id,
-      passwordHash: adminPasswordHash
+      passwordHash: adminPasswordHash,
+      role: UserRole.ADMIN
     },
     create: {
       email: "admin@movth.test",
       passwordHash: adminPasswordHash,
+      role: UserRole.ADMIN,
       planId: premium.id,
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       profiles: {
@@ -77,14 +86,38 @@ async function main() {
     }
   });
 
+  const genres = [
+    { name: "Acao", slug: "acao" },
+    { name: "Drama", slug: "drama" },
+    { name: "Suspense", slug: "suspense" },
+    { name: "Ficcao cientifica", slug: "ficcao-cientifica" },
+    { name: "Familia", slug: "familia" }
+  ];
+  const genreMap = new Map<string, string>();
+
+  for (const genreSeed of genres) {
+    const genre = await prisma.genre.upsert({
+      where: { slug: genreSeed.slug },
+      update: {
+        name: genreSeed.name
+      },
+      create: genreSeed
+    });
+
+    genreMap.set(genre.slug, genre.id);
+  }
+
   const titles = [
     {
       type: TitleType.MOVIE,
       title: "A Ultima Janela",
-      synopsis: "Uma restauradora descobre transmissões antigas escondidas em filmes perdidos.",
+      synopsis: "Uma restauradora descobre transmissoes antigas escondidas em filmes perdidos.",
       releaseYear: 2024,
       rating: "14",
       tmdbId: 910001,
+      posterUrl: "https://cdn.example.com/posters/a-ultima-janela.jpg",
+      backdropUrl: "https://cdn.example.com/backdrops/a-ultima-janela.jpg",
+      genres: ["suspense", "drama"],
       episodes: []
     },
     {
@@ -94,6 +127,9 @@ async function main() {
       releaseYear: 2025,
       rating: "12",
       tmdbId: 910002,
+      posterUrl: "https://cdn.example.com/posters/orbita-sul.jpg",
+      backdropUrl: "https://cdn.example.com/backdrops/orbita-sul.jpg",
+      genres: ["ficcao-cientifica", "suspense"],
       episodes: [
         { season: 1, number: 1, durationS: 2760 },
         { season: 1, number: 2, durationS: 2810 },
@@ -102,20 +138,26 @@ async function main() {
     },
     {
       type: TitleType.MOVIE,
-      title: "Rua das Marés",
+      title: "Rua das Mares",
       synopsis: "Um drama costeiro sobre familia, memoria e uma cidade que muda de lugar.",
       releaseYear: 2023,
       rating: "16",
       tmdbId: 910003,
+      posterUrl: "https://cdn.example.com/posters/rua-das-mares.jpg",
+      backdropUrl: "https://cdn.example.com/backdrops/rua-das-mares.jpg",
+      genres: ["drama"],
       episodes: []
     },
     {
       type: TitleType.SERIES,
-      title: "Código Aurora",
+      title: "Codigo Aurora",
       synopsis: "Analistas de seguranca descobrem um padrao impossivel em ataques globais.",
       releaseYear: 2026,
       rating: "16",
       tmdbId: 910004,
+      posterUrl: "https://cdn.example.com/posters/codigo-aurora.jpg",
+      backdropUrl: "https://cdn.example.com/backdrops/codigo-aurora.jpg",
+      genres: ["acao", "ficcao-cientifica"],
       episodes: [
         { season: 1, number: 1, durationS: 3180 },
         { season: 1, number: 2, durationS: 3020 }
@@ -128,6 +170,9 @@ async function main() {
       releaseYear: 2022,
       rating: "L",
       tmdbId: 910005,
+      posterUrl: "https://cdn.example.com/posters/pequenos-gigantes.jpg",
+      backdropUrl: "https://cdn.example.com/backdrops/pequenos-gigantes.jpg",
+      genres: ["familia"],
       episodes: []
     }
   ];
@@ -136,19 +181,44 @@ async function main() {
     const title = await prisma.title.upsert({
       where: { tmdbId: titleSeed.tmdbId },
       update: {
-        title: titleSeed.title,
-        synopsis: titleSeed.synopsis,
-        releaseYear: titleSeed.releaseYear,
-        rating: titleSeed.rating
-      },
-      create: {
-        type: titleSeed.type,
+        status: TitleStatus.READY,
         title: titleSeed.title,
         synopsis: titleSeed.synopsis,
         releaseYear: titleSeed.releaseYear,
         rating: titleSeed.rating,
+        posterUrl: titleSeed.posterUrl,
+        backdropUrl: titleSeed.backdropUrl
+      },
+      create: {
+        type: titleSeed.type,
+        status: TitleStatus.READY,
+        title: titleSeed.title,
+        synopsis: titleSeed.synopsis,
+        releaseYear: titleSeed.releaseYear,
+        rating: titleSeed.rating,
+        posterUrl: titleSeed.posterUrl,
+        backdropUrl: titleSeed.backdropUrl,
         tmdbId: titleSeed.tmdbId
       }
+    });
+
+    await prisma.titleGenre.deleteMany({
+      where: { titleId: title.id }
+    });
+    await prisma.titleGenre.createMany({
+      data: titleSeed.genres.map((slug) => {
+        const genreId = genreMap.get(slug);
+
+        if (!genreId) {
+          throw new Error(`Missing genre for slug ${slug}`);
+        }
+
+        return {
+          titleId: title.id,
+          genreId
+        };
+      }),
+      skipDuplicates: true
     });
 
     if (titleSeed.type === TitleType.MOVIE) {
@@ -160,21 +230,23 @@ async function main() {
         }
       });
 
+      const movieAssetData = {
+        hlsManifestUrl: `https://cdn.example.com/hls/titles/${title.id}/hd/master.m3u8`,
+        thumbnailUrl: `https://cdn.example.com/thumbnails/titles/${title.id}.jpg`,
+        status: VideoAssetStatus.READY
+      };
+
       if (existingMovieAsset) {
         await prisma.videoAsset.update({
           where: { id: existingMovieAsset.id },
-          data: {
-            hlsManifestUrl: `https://cdn.example.com/hls/titles/${title.id}/hd/master.m3u8`,
-            status: VideoAssetStatus.READY
-          }
+          data: movieAssetData
         });
       } else {
         await prisma.videoAsset.create({
           data: {
-          titleId: title.id,
-          quality: VideoQuality.HD,
-          hlsManifestUrl: `https://cdn.example.com/hls/titles/${title.id}/hd/master.m3u8`,
-          status: VideoAssetStatus.READY
+            titleId: title.id,
+            quality: VideoQuality.HD,
+            ...movieAssetData
           }
         });
       }
@@ -208,12 +280,15 @@ async function main() {
             quality: VideoQuality.HD
           }
         },
-        update: {},
+        update: {
+          thumbnailUrl: `https://cdn.example.com/thumbnails/episodes/${episode.id}.jpg`
+        },
         create: {
           titleId: title.id,
           episodeId: episode.id,
           quality: VideoQuality.HD,
           hlsManifestUrl: `https://cdn.example.com/hls/episodes/${episode.id}/hd/master.m3u8`,
+          thumbnailUrl: `https://cdn.example.com/thumbnails/episodes/${episode.id}.jpg`,
           status: VideoAssetStatus.READY
         }
       });

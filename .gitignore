@@ -19,3 +19,4 @@ pnpm-debug.log*
 packages/db/generated
 apps/**/.turbo
 .DS_Store
+.idea

@@ -36,10 +36,23 @@ enum SubscriptionStatus {
   UNPAID
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TitleStatus {
+  DRAFT
+  PROCESSING
+  READY
+  ARCHIVED
+}
+
 model User {
   id             String          @id @default(uuid()) @db.Uuid
   email          String          @unique
   passwordHash   String          @map("password_hash")
+  role           UserRole        @default(USER)
   planId         String?         @map("plan_id") @db.Uuid
   trialEndsAt    DateTime?       @map("trial_ends_at") @db.Timestamptz(6)
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -91,10 +104,13 @@ model Profile {
 model Title {
   id           String         @id @default(uuid()) @db.Uuid
   type         TitleType
+  status       TitleStatus    @default(DRAFT)
   title        String
   synopsis     String
   releaseYear  Int            @map("release_year")
   rating       String
+  posterUrl    String?        @map("poster_url")
+  backdropUrl  String?        @map("backdrop_url")
   tmdbId       Int?           @unique @map("tmdb_id")
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -103,11 +119,37 @@ model Title {
   videoAssets  VideoAsset[]
   watchHistory WatchHistory[]
   watchlist    Watchlist[]
+  genres        TitleGenre[]
 
   @@index([type])
+  @@index([status])
   @@index([releaseYear])
   @@index([title])
   @@map("titles")
+}
+
+model Genre {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String       @unique
+  slug      String       @unique
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  titles    TitleGenre[]
+
+  @@map("genres")
+}
+
+model TitleGenre {
+  titleId String @map("title_id") @db.Uuid
+  genreId String @map("genre_id") @db.Uuid
+
+  title   Title  @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([titleId, genreId])
+  @@index([genreId])
+  @@map("title_genres")
 }
 
 model Episode {
@@ -134,6 +176,7 @@ model VideoAsset {
   episodeId      String?          @map("episode_id") @db.Uuid
   quality        VideoQuality
   hlsManifestUrl String           @map("hls_manifest_url")
+  thumbnailUrl   String?          @map("thumbnail_url")
   status         VideoAssetStatus @default(PENDING)
   createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
