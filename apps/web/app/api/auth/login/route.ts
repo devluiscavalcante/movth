@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { apiBaseUrl, cookieOptions } from "../../../lib/session";
+import { apiBaseUrl, setAuthCookies } from "../../../lib/session";
 
 type LoginResponse = {
   data?: {
@@ -27,8 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json(body, { status: response.status });
   }
 
-  cookies().set("movth_access_token", body.data.accessToken, cookieOptions(15 * 60));
-  cookies().set("movth_refresh_token", body.data.refreshToken, cookieOptions(30 * 24 * 60 * 60));
+  setAuthCookies(body.data);
 
   return NextResponse.json({
     data: {

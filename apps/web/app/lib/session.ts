@@ -117,6 +117,12 @@ export type WatchResponse = {
   sessionId: string;
 };
 
+type TokenPairResponse = {
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+};
+
 export function apiBaseUrl() {
   return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
@@ -131,8 +137,60 @@ export function cookieOptions(maxAge: number) {
   };
 }
 
-export async function serverApi<T>(path: string, init: RequestInit = {}) {
-  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+export function setAuthCookies(tokens: { accessToken: string; refreshToken: string }) {
+  cookies().set(ACCESS_TOKEN_COOKIE, tokens.accessToken, cookieOptions(15 * 60));
+  cookies().set(REFRESH_TOKEN_COOKIE, tokens.refreshToken, cookieOptions(30 * 24 * 60 * 60));
+}
+
+export function clearAuthCookies() {
+  cookies().delete(ACCESS_TOKEN_COOKIE);
+  cookies().delete(REFRESH_TOKEN_COOKIE);
+  cookies().delete(PROFILE_COOKIE);
+}
+
+function trySetAuthCookies(tokens: { accessToken: string; refreshToken: string }) {
+  try {
+    setAuthCookies(tokens);
+  } catch {
+    // Server Components can use the refreshed token for this render, while Route Handlers persist it.
+  }
+}
+
+function tryClearAuthCookies() {
+  try {
+    clearAuthCookies();
+  } catch {
+    // Cookie mutation is only available in Route Handlers and Server Actions.
+  }
+}
+
+async function refreshAccessToken() {
+  const refreshToken = cookies().get(REFRESH_TOKEN_COOKIE)?.value;
+
+  if (!refreshToken) {
+    return null;
+  }
+
+  const response = await fetch(`${apiBaseUrl()}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ refreshToken }),
+    cache: "no-store"
+  });
+  const body = (await response.json().catch(() => ({}))) as ApiEnvelope<TokenPairResponse>;
+
+  if (!response.ok || !body.data) {
+    tryClearAuthCookies();
+    return null;
+  }
+
+  trySetAuthCookies(body.data);
+  return body.data.accessToken;
+}
+
+async function apiFetch<T>(path: string, init: RequestInit, accessToken?: string) {
   const headers = new Headers(init.headers);
 
   if (accessToken) {
@@ -151,6 +209,23 @@ export async function serverApi<T>(path: string, init: RequestInit = {}) {
     status: response.status,
     body
   };
+}
+
+export async function serverApi<T>(path: string, init: RequestInit = {}) {
+  const accessToken = cookies().get(ACCESS_TOKEN_COOKIE)?.value;
+  const result = await apiFetch<T>(path, init, accessToken);
+
+  if (result.status !== 401) {
+    return result;
+  }
+
+  const refreshedAccessToken = await refreshAccessToken();
+
+  if (!refreshedAccessToken) {
+    return result;
+  }
+
+  return apiFetch<T>(path, init, refreshedAccessToken);
 }
 
 export async function requireUser() {

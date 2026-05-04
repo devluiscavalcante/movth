@@ -1,11 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  ACCESS_TOKEN_COOKIE,
-  PROFILE_COOKIE,
-  REFRESH_TOKEN_COOKIE,
-  apiBaseUrl
-} from "../../../lib/session";
+import { REFRESH_TOKEN_COOKIE, apiBaseUrl, clearAuthCookies } from "../../../lib/session";
 
 export async function POST() {
   const refreshToken = cookies().get(REFRESH_TOKEN_COOKIE)?.value;
@@ -21,9 +16,7 @@ export async function POST() {
     }).catch(() => undefined);
   }
 
-  cookies().delete(ACCESS_TOKEN_COOKIE);
-  cookies().delete(REFRESH_TOKEN_COOKIE);
-  cookies().delete(PROFILE_COOKIE);
+  clearAuthCookies();
 
   return NextResponse.json({ data: { ok: true } });
 }
