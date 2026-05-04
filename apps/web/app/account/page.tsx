@@ -27,6 +27,7 @@ export default async function AccountPage() {
           Movth
         </a>
         <div className="nav-actions">
+          {user.role === "ADMIN" ? <a href="/admin">Admin</a> : null}
           <a href="/search">Busca</a>
           <a href="/profiles">Perfis</a>
           <LogoutButton />

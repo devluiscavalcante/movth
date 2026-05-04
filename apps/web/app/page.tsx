@@ -79,6 +79,7 @@ export default async function HomePage() {
       <nav className="top-nav">
         <p className="brand-mark">Movth</p>
         <div className="nav-actions">
+          {user.role === "ADMIN" ? <a href="/admin">Admin</a> : null}
           <a href="/search">Busca</a>
           <a href="/account">Conta</a>
           <a href="/profiles">Perfis</a>
