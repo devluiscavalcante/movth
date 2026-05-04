@@ -71,6 +71,14 @@ export default async function WatchPage({ params }: WatchPageProps) {
         episodeId={watch.body.data.episodeId}
         initialPositionS={initialPositionS}
         manifestUrl={watch.body.data.manifestUrl}
+        nextHref={
+          watch.body.data.nextEpisode ? `/watch/${watch.body.data.nextEpisode.assetId}` : null
+        }
+        nextLabel={
+          watch.body.data.nextEpisode
+            ? `T${watch.body.data.nextEpisode.season}:E${watch.body.data.nextEpisode.number}`
+            : null
+        }
         profileId={profileId}
         subtitle={
           watch.body.data.episode

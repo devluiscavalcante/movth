@@ -72,7 +72,7 @@ export default async function HomePage() {
   const genreRows = await getTitlesByGenre(homeData.genres);
   const heroTitle = homeData.titles[0];
   const watchlistIds = titleIdsFromWatchlist(homeData.watchlist);
-  const heroAsset = heroTitle?.assets?.find((asset) => asset.status === "READY");
+  const heroHasPlayableAsset = Boolean(heroTitle?.assets?.some((asset) => asset.status === "READY"));
 
   return (
     <main className="home-page catalog-home">
@@ -109,8 +109,8 @@ export default async function HomePage() {
               <span>{heroTitle.type === "MOVIE" ? "Filme" : "Serie"}</span>
             </div>
             <div className="hero-actions">
-              {heroAsset ? (
-                <a className="primary-action" href={`/watch/${heroAsset.id}`}>
+              {heroHasPlayableAsset ? (
+                <a className="primary-action" href={`/play/title/${heroTitle.id}`}>
                   ▶ Assistir
                 </a>
               ) : null}
