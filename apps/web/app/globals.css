@@ -39,6 +39,11 @@ input {
   font: inherit;
 }
 
+textarea,
+select {
+  font: inherit;
+}
+
 button {
   cursor: pointer;
 }
@@ -1041,6 +1046,229 @@ button:disabled {
   margin: 4px 0 0;
 }
 
+.admin-page {
+  min-height: 100vh;
+  padding: 0 0 56px;
+}
+
+.admin-nav {
+  left: 0;
+  padding: 24px 40px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 5;
+}
+
+.admin-header {
+  background: linear-gradient(180deg, #171717 0%, #0a0a0a 100%);
+  display: grid;
+  gap: 12px;
+  padding: 112px 40px 34px;
+}
+
+.admin-header h1 {
+  font-size: clamp(2.3rem, 6vw, 4.8rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+}
+
+.admin-header p:last-child {
+  color: var(--muted);
+  margin: 0;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+  padding: 34px 40px 0;
+}
+
+.admin-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.admin-panel h2 {
+  font-size: 1.45rem;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.admin-list-panel {
+  align-self: start;
+}
+
+.admin-table {
+  display: grid;
+  gap: 8px;
+  max-height: 620px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.admin-row {
+  align-items: center;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(74px, auto);
+  min-height: 68px;
+  padding: 12px;
+  text-align: left;
+}
+
+.admin-row.is-selected {
+  border-color: var(--foreground);
+}
+
+.admin-row span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-row strong {
+  overflow-wrap: anywhere;
+}
+
+.admin-row small {
+  color: var(--muted);
+}
+
+.admin-form {
+  grid-row: span 2;
+}
+
+.admin-form,
+.admin-form-grid,
+.admin-inline-form,
+.upload-result {
+  align-content: start;
+}
+
+.admin-form label,
+.admin-inline-form label,
+.upload-result label {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.88rem;
+  gap: 8px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea,
+.admin-inline-form input,
+.admin-inline-form select,
+.upload-result select {
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--foreground);
+  min-height: 44px;
+  outline: none;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.admin-form textarea {
+  min-height: 112px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
+.admin-form input:focus,
+.admin-form select:focus,
+.admin-form textarea:focus,
+.admin-inline-form input:focus,
+.admin-inline-form select:focus,
+.upload-result select:focus {
+  border-color: var(--focus);
+}
+
+.admin-form-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-check-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.admin-detail-panel {
+  align-self: start;
+}
+
+.admin-facts {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.admin-facts div {
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.admin-facts dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.admin-facts dd {
+  font-weight: 800;
+  margin: 0;
+}
+
+.admin-inline-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+}
+
+.upload-result {
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.upload-result code {
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.upload-result a {
+  color: var(--foreground);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-message {
+  color: #ffffff;
+  margin: 0;
+}
+
 .state-page {
   align-items: center;
   display: grid;
@@ -1199,5 +1427,33 @@ button:disabled {
   .panel-heading-row {
     align-items: stretch;
     display: grid;
+  }
+
+  .admin-nav {
+    padding: 18px;
+  }
+
+  .admin-header {
+    padding: 92px 18px 30px;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .admin-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form {
+    grid-row: auto;
+  }
+
+  .admin-form-grid,
+  .admin-facts,
+  .admin-inline-form {
+    grid-template-columns: 1fr;
   }
 }

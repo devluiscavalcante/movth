@@ -10,6 +10,13 @@ const titleParamsSchema = z.object({
   id: z.string().uuid()
 });
 
+const listTitlesQuerySchema = z.object({
+  type: z.nativeEnum(TitleType).optional(),
+  status: z.nativeEnum(TitleStatus).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50)
+});
+
 const episodeParamsSchema = z.object({
   id: z.string().uuid()
 });
@@ -82,6 +89,48 @@ function titleInclude() {
 export async function adminCatalogRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
   app.addHook("preHandler", requireAdmin);
+
+  app.get("/titles", async (request, reply) => {
+    const query = listTitlesQuerySchema.parse(request.query);
+    const where = {
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.status ? { status: query.status } : {})
+    };
+    const skip = (query.page - 1) * query.pageSize;
+    const [titles, total] = await Promise.all([
+      prisma.title.findMany({
+        where,
+        include: titleInclude(),
+        orderBy: {
+          createdAt: "desc"
+        },
+        skip,
+        take: query.pageSize
+      }),
+      prisma.title.count({ where })
+    ]);
+
+    return sendData(reply, titles, {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      totalPages: Math.ceil(total / query.pageSize)
+    });
+  });
+
+  app.get("/titles/:id", async (request, reply) => {
+    const params = titleParamsSchema.parse(request.params);
+    const title = await prisma.title.findUnique({
+      where: { id: params.id },
+      include: titleInclude()
+    });
+
+    if (!title) {
+      throw notFound("TITLE_NOT_FOUND", "Title not found");
+    }
+
+    return sendData(reply, title);
+  });
 
   app.post("/titles", async (request, reply) => {
     const body = titleBodySchema.parse(request.body);
