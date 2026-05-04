@@ -89,6 +89,24 @@ export type WatchlistItem = {
   title: Title;
 };
 
+export type Episode = {
+  id: string;
+  titleId: string;
+  season: number;
+  number: number;
+  durationS: number;
+  videoAssets: TitleAsset[];
+};
+
+export type EpisodeSeason = {
+  season: number;
+  episodes: Episode[];
+};
+
+export type EpisodesResponse = {
+  seasons: EpisodeSeason[];
+};
+
 export function apiBaseUrl() {
   return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
