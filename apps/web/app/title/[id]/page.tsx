@@ -76,6 +76,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
         </a>
         <div className="nav-actions">
           <a href="/search">Busca</a>
+          <a href="/account">Conta</a>
           <a href="/profiles">Perfis</a>
           <LogoutButton />
         </div>
