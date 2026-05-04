@@ -82,6 +82,33 @@ async function parseResponse<T>(response: Response) {
   return body.data;
 }
 
+async function parseEmptyResponse(response: Response) {
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiEnvelope<unknown>;
+    throw new Error(body.error?.message ?? "Falha na operacao");
+  }
+}
+
+function titlePayloadFromForm(formData: FormData, genres: Genre[]) {
+  const genreSlugs = genres
+    .filter((genre) => formData.get(`genre:${genre.slug}`) === "on")
+    .map((genre) => genre.slug);
+  const tmdbIdValue = String(formData.get("tmdbId") ?? "").trim();
+
+  return {
+    type: String(formData.get("type")),
+    status: String(formData.get("status")),
+    title: String(formData.get("title") ?? "").trim(),
+    synopsis: String(formData.get("synopsis") ?? "").trim(),
+    releaseYear: Number(formData.get("releaseYear")),
+    rating: String(formData.get("rating") ?? "").trim(),
+    posterUrl: emptyToNull(formData.get("posterUrl")),
+    backdropUrl: emptyToNull(formData.get("backdropUrl")),
+    tmdbId: tmdbIdValue ? Number(tmdbIdValue) : null,
+    genreSlugs
+  };
+}
+
 export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
   const [titles, setTitles] = useState(initialTitles);
   const [selectedTitleId, setSelectedTitleId] = useState(initialTitles[0]?.id ?? "");
@@ -106,22 +133,7 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
     setMessage(null);
 
     try {
-      const genreSlugs = genres
-        .filter((genre) => formData.get(`genre:${genre.slug}`) === "on")
-        .map((genre) => genre.slug);
-      const tmdbIdValue = String(formData.get("tmdbId") ?? "").trim();
-      const payload = {
-        type: String(formData.get("type")),
-        status: String(formData.get("status")),
-        title: String(formData.get("title") ?? "").trim(),
-        synopsis: String(formData.get("synopsis") ?? "").trim(),
-        releaseYear: Number(formData.get("releaseYear")),
-        rating: String(formData.get("rating") ?? "").trim(),
-        posterUrl: emptyToNull(formData.get("posterUrl")),
-        backdropUrl: emptyToNull(formData.get("backdropUrl")),
-        tmdbId: tmdbIdValue ? Number(tmdbIdValue) : null,
-        genreSlugs
-      };
+      const payload = titlePayloadFromForm(formData, genres);
       const created = await parseResponse<AdminTitle>(
         await fetch("/api/admin/titles", {
           method: "POST",
@@ -136,6 +148,95 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
       setMessage("Titulo criado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao criar titulo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateTitle(formData: FormData) {
+    if (!selectedTitle) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const payload = titlePayloadFromForm(formData, genres);
+      const updated = await parseResponse<AdminTitle>(
+        await fetch(`/api/admin/titles/${selectedTitle.id}`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+      );
+
+      await reloadTitles(updated.id);
+      setMessage("Titulo atualizado.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao atualizar titulo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function archiveTitle() {
+    if (!selectedTitle) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const updated = await parseResponse<AdminTitle>(
+        await fetch(`/api/admin/titles/${selectedTitle.id}`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({ status: "ARCHIVED" })
+        })
+      );
+
+      await reloadTitles(updated.id);
+      setMessage("Titulo arquivado.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao arquivar titulo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteTitle() {
+    if (!selectedTitle) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Excluir definitivamente "${selectedTitle.title}"? Esta acao remove episodios, assets e vinculos relacionados.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      await parseEmptyResponse(
+        await fetch(`/api/admin/titles/${selectedTitle.id}`, {
+          method: "DELETE"
+        })
+      );
+      setUpload(null);
+      await reloadTitles();
+      setMessage("Titulo excluido.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao excluir titulo.");
     } finally {
       setBusy(false);
     }
@@ -167,6 +268,66 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
       setMessage("Episodio criado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao criar episodio.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateEpisode(episodeId: string, formData: FormData) {
+    if (!selectedTitle) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      await parseResponse<AdminEpisode>(
+        await fetch(`/api/admin/episodes/${episodeId}`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            season: Number(formData.get("season")),
+            number: Number(formData.get("number")),
+            durationS: Number(formData.get("durationS"))
+          })
+        })
+      );
+      await reloadTitles(selectedTitle.id);
+      setMessage("Episodio atualizado.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao atualizar episodio.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteEpisode(episode: AdminEpisode) {
+    if (!selectedTitle) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Excluir episodio T${episode.season}:E${episode.number}?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      await parseEmptyResponse(
+        await fetch(`/api/admin/episodes/${episode.id}`, {
+          method: "DELETE"
+        })
+      );
+      await reloadTitles(selectedTitle.id);
+      setMessage("Episodio excluido.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao excluir episodio.");
     } finally {
       setBusy(false);
     }
@@ -368,37 +529,175 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
               </div>
             </dl>
 
-            {selectedTitle.type === "SERIES" ? (
-              <form
-                className="admin-inline-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void addEpisode(new FormData(event.currentTarget));
-                  event.currentTarget.reset();
-                }}
-              >
+            <form
+              className="admin-edit-form"
+              key={selectedTitle.id}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void updateTitle(new FormData(event.currentTarget));
+              }}
+            >
+              <div className="panel-heading-row">
+                <div>
+                  <p className="panel-label">Edicao</p>
+                  <h2>Dados do titulo</h2>
+                </div>
+                <div className="admin-actions">
+                  <button className="secondary-action" disabled={busy} type="button" onClick={archiveTitle}>
+                    Arquivar
+                  </button>
+                  <button className="danger-action" disabled={busy} type="button" onClick={deleteTitle}>
+                    Excluir
+                  </button>
+                </div>
+              </div>
+              <div className="admin-form-grid">
                 <label>
-                  Temporada
-                  <input defaultValue={1} min={1} name="season" required type="number" />
+                  Nome
+                  <input defaultValue={selectedTitle.title} name="title" required />
                 </label>
                 <label>
-                  Episodio
+                  Tipo
+                  <select defaultValue={selectedTitle.type} name="type" required>
+                    <option value="MOVIE">Filme</option>
+                    <option value="SERIES">Serie</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select defaultValue={selectedTitle.status} name="status" required>
+                    <option value="DRAFT">Rascunho</option>
+                    <option value="PROCESSING">Processando</option>
+                    <option value="READY">Pronto</option>
+                    <option value="ARCHIVED">Arquivado</option>
+                  </select>
+                </label>
+                <label>
+                  Ano
                   <input
-                    defaultValue={selectedTitle.episodes.length + 1}
-                    min={1}
-                    name="number"
+                    defaultValue={selectedTitle.releaseYear}
+                    min={1888}
+                    name="releaseYear"
                     required
                     type="number"
                   />
                 </label>
                 <label>
-                  Duracao (s)
-                  <input defaultValue={2400} min={1} name="durationS" required type="number" />
+                  Classificacao
+                  <input defaultValue={selectedTitle.rating} name="rating" required />
                 </label>
-                <button className="secondary-action" disabled={busy} type="submit">
-                  Adicionar episodio
-                </button>
-              </form>
+                <label>
+                  TMDB ID
+                  <input defaultValue={selectedTitle.tmdbId ?? ""} min={1} name="tmdbId" type="number" />
+                </label>
+              </div>
+              <label>
+                Sinopse
+                <textarea defaultValue={selectedTitle.synopsis} name="synopsis" required rows={4} />
+              </label>
+              <label>
+                Poster URL
+                <input defaultValue={selectedTitle.posterUrl ?? ""} name="posterUrl" type="url" />
+              </label>
+              <label>
+                Backdrop URL
+                <input defaultValue={selectedTitle.backdropUrl ?? ""} name="backdropUrl" type="url" />
+              </label>
+              <div className="admin-check-grid">
+                {genres.map((genre) => (
+                  <label className="checkbox-row" key={genre.id}>
+                    <input
+                      defaultChecked={selectedTitle.genres.some((entry) => entry.genre.slug === genre.slug)}
+                      name={`genre:${genre.slug}`}
+                      type="checkbox"
+                    />
+                    {genre.name}
+                  </label>
+                ))}
+              </div>
+              <button className="primary-action" disabled={busy} type="submit">
+                Salvar alteracoes
+              </button>
+            </form>
+
+            {selectedTitle.type === "SERIES" ? (
+              <div className="episode-admin-section">
+                <form
+                  className="admin-inline-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void addEpisode(new FormData(event.currentTarget));
+                    event.currentTarget.reset();
+                  }}
+                >
+                  <label>
+                    Temporada
+                    <input defaultValue={1} min={1} name="season" required type="number" />
+                  </label>
+                  <label>
+                    Episodio
+                    <input
+                      defaultValue={selectedTitle.episodes.length + 1}
+                      min={1}
+                      name="number"
+                      required
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    Duracao (s)
+                    <input defaultValue={2400} min={1} name="durationS" required type="number" />
+                  </label>
+                  <button className="secondary-action" disabled={busy} type="submit">
+                    Adicionar episodio
+                  </button>
+                </form>
+
+                <div className="episode-admin-list">
+                  {selectedTitle.episodes.map((episode) => (
+                    <form
+                      className="episode-admin-row"
+                      key={episode.id}
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void updateEpisode(episode.id, new FormData(event.currentTarget));
+                      }}
+                    >
+                      <label>
+                        Temporada
+                        <input defaultValue={episode.season} min={1} name="season" required type="number" />
+                      </label>
+                      <label>
+                        Episodio
+                        <input defaultValue={episode.number} min={1} name="number" required type="number" />
+                      </label>
+                      <label>
+                        Duracao (s)
+                        <input
+                          defaultValue={episode.durationS}
+                          min={1}
+                          name="durationS"
+                          required
+                          type="number"
+                        />
+                      </label>
+                      <div className="admin-actions">
+                        <button className="secondary-action" disabled={busy} type="submit">
+                          Salvar
+                        </button>
+                        <button
+                          className="danger-action"
+                          disabled={busy}
+                          type="button"
+                          onClick={() => deleteEpisode(episode)}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </form>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             <form
