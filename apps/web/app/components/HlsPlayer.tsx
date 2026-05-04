@@ -9,6 +9,9 @@ type HlsPlayerProps = {
   titleId: string;
   episodeId: string | null;
   initialPositionS: number;
+  titleLabel: string;
+  subtitle: string;
+  backHref: string;
 };
 
 type QualityLevel = {
@@ -46,7 +49,10 @@ export function HlsPlayer({
   profileId,
   titleId,
   episodeId,
-  initialPositionS
+  initialPositionS,
+  titleLabel,
+  subtitle,
+  backHref
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -175,6 +181,13 @@ export function HlsPlayer({
   return (
     <section className="player-shell">
       <div className="video-stage">
+        <div className="player-title-overlay">
+          <a href={backHref}>Voltar</a>
+          <div>
+            <strong>{titleLabel}</strong>
+            <span>{subtitle}</span>
+          </div>
+        </div>
         <video
           onDurationChange={(event) => setDuration(event.currentTarget.duration)}
           onEnded={(event) => {

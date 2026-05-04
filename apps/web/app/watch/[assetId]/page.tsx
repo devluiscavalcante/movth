@@ -67,10 +67,17 @@ export default async function WatchPage({ params }: WatchPageProps) {
         <LogoutButton />
       </nav>
       <HlsPlayer
+        backHref={`/title/${watch.body.data.titleId}`}
         episodeId={watch.body.data.episodeId}
         initialPositionS={initialPositionS}
         manifestUrl={watch.body.data.manifestUrl}
         profileId={profileId}
+        subtitle={
+          watch.body.data.episode
+            ? `T${watch.body.data.episode.season}:E${watch.body.data.episode.number}`
+            : `${watch.body.data.title.releaseYear} - ${watch.body.data.title.rating}`
+        }
+        titleLabel={watch.body.data.title.title}
         titleId={watch.body.data.titleId}
       />
     </main>
