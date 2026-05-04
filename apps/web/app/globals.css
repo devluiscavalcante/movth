@@ -817,6 +817,78 @@ button:disabled {
   min-height: 40px;
 }
 
+.search-page {
+  min-height: 100vh;
+  padding: 0 0 56px;
+}
+
+.search-nav {
+  left: 0;
+  padding: 24px 40px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 5;
+}
+
+.search-header {
+  background: linear-gradient(180deg, #171717 0%, #0a0a0a 100%);
+  display: grid;
+  gap: 22px;
+  padding: 112px 40px 38px;
+}
+
+.search-header h1 {
+  font-size: clamp(2.4rem, 7vw, 5rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+}
+
+.search-form {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(240px, 1fr) minmax(132px, 180px) minmax(150px, 220px) auto;
+  max-width: 1040px;
+}
+
+.search-form label {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.88rem;
+  gap: 8px;
+}
+
+.search-form input,
+.search-form select {
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--foreground);
+  min-height: 48px;
+  outline: none;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.search-form input:focus,
+.search-form select:focus {
+  border-color: var(--focus);
+}
+
+.search-results {
+  display: grid;
+  gap: 18px;
+  padding: 34px 40px 0;
+}
+
+.results-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
 @media (max-width: 760px) {
   .auth-panel {
     padding: 24px;
@@ -897,5 +969,26 @@ button:disabled {
   .time-control,
   .volume-control {
     grid-column: 1 / -1;
+  }
+
+  .search-nav {
+    padding: 18px;
+  }
+
+  .search-header {
+    padding: 92px 18px 30px;
+  }
+
+  .search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .search-results {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
   }
 }
