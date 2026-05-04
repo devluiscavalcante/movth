@@ -75,6 +75,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
           Movth
         </a>
         <div className="nav-actions">
+          <a href="/search">Busca</a>
           <a href="/profiles">Perfis</a>
           <LogoutButton />
         </div>
