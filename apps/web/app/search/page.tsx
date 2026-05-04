@@ -91,6 +91,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           Movth
         </a>
         <div className="nav-actions">
+          <a href="/account">Conta</a>
           <a href="/profiles">Perfis</a>
           <LogoutButton />
         </div>

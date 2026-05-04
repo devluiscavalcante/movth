@@ -80,6 +80,7 @@ export default async function HomePage() {
         <p className="brand-mark">Movth</p>
         <div className="nav-actions">
           <a href="/search">Busca</a>
+          <a href="/account">Conta</a>
           <a href="/profiles">Perfis</a>
           <span>{user.plan?.name ?? "Sem plano"}</span>
           <LogoutButton />
