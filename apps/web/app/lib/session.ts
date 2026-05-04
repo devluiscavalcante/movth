@@ -107,6 +107,16 @@ export type EpisodesResponse = {
   seasons: EpisodeSeason[];
 };
 
+export type WatchResponse = {
+  assetId: string;
+  titleId: string;
+  episodeId: string | null;
+  quality: string;
+  manifestUrl: string;
+  expiresAt: string;
+  sessionId: string;
+};
+
 export function apiBaseUrl() {
   return process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 }
