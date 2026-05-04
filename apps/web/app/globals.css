@@ -164,6 +164,19 @@ button:disabled {
   border: 1px solid var(--border);
 }
 
+.danger-action {
+  align-items: center;
+  background: #3a1114;
+  border: 1px solid #7f1d24;
+  border-radius: 6px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
 .text-action {
   background: transparent;
   border: 0;
@@ -1157,7 +1170,9 @@ button:disabled {
 }
 
 .admin-form label,
+.admin-edit-form label,
 .admin-inline-form label,
+.episode-admin-row label,
 .upload-result label {
   color: var(--muted);
   display: grid;
@@ -1168,8 +1183,12 @@ button:disabled {
 .admin-form input,
 .admin-form select,
 .admin-form textarea,
+.admin-edit-form input,
+.admin-edit-form select,
+.admin-edit-form textarea,
 .admin-inline-form input,
 .admin-inline-form select,
+.episode-admin-row input,
 .upload-result select {
   background: #0f0f0f;
   border: 1px solid var(--border);
@@ -1188,11 +1207,22 @@ button:disabled {
   resize: vertical;
 }
 
+.admin-edit-form textarea {
+  min-height: 112px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  resize: vertical;
+}
+
 .admin-form input:focus,
 .admin-form select:focus,
 .admin-form textarea:focus,
+.admin-edit-form input:focus,
+.admin-edit-form select:focus,
+.admin-edit-form textarea:focus,
 .admin-inline-form input:focus,
 .admin-inline-form select:focus,
+.episode-admin-row input:focus,
 .upload-result select:focus {
   border-color: var(--focus);
 }
@@ -1211,6 +1241,21 @@ button:disabled {
 
 .admin-detail-panel {
   align-self: start;
+}
+
+.admin-edit-form,
+.episode-admin-section {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.admin-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .admin-facts {
@@ -1242,6 +1287,22 @@ button:disabled {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+}
+
+.episode-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.episode-admin-row {
+  align-items: end;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  padding: 12px;
 }
 
 .upload-result {
@@ -1453,7 +1514,8 @@ button:disabled {
 
   .admin-form-grid,
   .admin-facts,
-  .admin-inline-form {
+  .admin-inline-form,
+  .episode-admin-row {
     grid-template-columns: 1fr;
   }
 }
