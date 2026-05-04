@@ -555,6 +555,22 @@ button:disabled {
   padding: 28px;
 }
 
+.watch-player-page {
+  background: #000000;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 0;
+}
+
+.watch-nav {
+  left: 0;
+  padding: 24px 28px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 10;
+}
+
 .watch-placeholder {
   align-content: center;
   display: grid;
@@ -573,6 +589,107 @@ button:disabled {
   color: var(--muted);
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.player-shell {
+  align-content: stretch;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  min-height: 100vh;
+  position: relative;
+}
+
+.video-stage {
+  align-items: center;
+  background: #000000;
+  display: grid;
+  min-height: 0;
+  position: relative;
+}
+
+.video-stage video {
+  height: 100%;
+  max-height: 100vh;
+  object-fit: contain;
+  width: 100%;
+}
+
+.player-error {
+  background: rgba(0, 0, 0, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: #ffffff;
+  left: 50%;
+  margin: 0;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 18px;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.player-controls {
+  align-items: center;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.92) 18%);
+  bottom: 0;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(160px, 220px) minmax(92px, 140px) auto;
+  left: 0;
+  padding: 22px 28px 18px;
+  position: absolute;
+  right: 0;
+  z-index: 8;
+}
+
+.control-button,
+.player-controls select {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--foreground);
+  font-weight: 700;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+.time-control,
+.volume-control {
+  align-items: center;
+  color: var(--muted);
+  display: grid;
+  gap: 10px;
+}
+
+.time-control {
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+}
+
+.volume-control {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.time-control input,
+.volume-control input {
+  accent-color: var(--accent);
+  width: 100%;
+}
+
+.progress-meter {
+  background: rgba(255, 255, 255, 0.12);
+  bottom: 0;
+  height: 4px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  z-index: 9;
+}
+
+.progress-meter span {
+  background: var(--accent);
+  display: block;
+  height: 100%;
 }
 
 .title-detail-page {
@@ -766,5 +883,19 @@ button:disabled {
   .episode-row {
     align-items: stretch;
     display: grid;
+  }
+
+  .watch-nav {
+    padding: 18px;
+  }
+
+  .player-controls {
+    grid-template-columns: 1fr 1fr;
+    padding: 18px;
+  }
+
+  .time-control,
+  .volume-control {
+    grid-column: 1 / -1;
   }
 }

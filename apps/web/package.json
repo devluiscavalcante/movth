@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@movth/types": "file:../../packages/types",
+    "hls.js": "^1.6.16",
     "next": "^14.2.22",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

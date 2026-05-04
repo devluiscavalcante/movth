@@ -1,7 +1,14 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { HlsPlayer } from "../../components/HlsPlayer";
 import { LogoutButton } from "../../components/LogoutButton";
-import { PROFILE_COOKIE, requireUser, serverApi } from "../../lib/session";
+import {
+  PROFILE_COOKIE,
+  type WatchHistoryItem,
+  type WatchResponse,
+  requireUser,
+  serverApi
+} from "../../lib/session";
 
 type WatchPageProps = {
   params: {
@@ -9,20 +16,23 @@ type WatchPageProps = {
   };
 };
 
-type WatchResponse = {
-  assetId: string;
-  titleId: string;
-  episodeId: string | null;
-  quality: string;
-  manifestUrl: string;
-  expiresAt: string;
-  sessionId: string;
-};
+async function getInitialPosition(profileId: string, watch: WatchResponse) {
+  const history = await serverApi<WatchHistoryItem[]>(
+    `/history?profileId=${profileId}&pageSize=50`
+  );
+
+  const item = history.body.data?.find(
+    (entry) => entry.titleId === watch.titleId && entry.episodeId === watch.episodeId
+  );
+
+  return item?.positionS ?? 0;
+}
 
 export default async function WatchPage({ params }: WatchPageProps) {
   await requireUser();
+  const profileId = cookies().get(PROFILE_COOKIE)?.value;
 
-  if (!cookies().get(PROFILE_COOKIE)?.value) {
+  if (!profileId) {
     redirect("/profiles");
   }
 
@@ -31,8 +41,10 @@ export default async function WatchPage({ params }: WatchPageProps) {
   if (!watch.ok || !watch.body.data) {
     return (
       <main className="watch-page">
-        <nav className="top-nav">
-          <p className="brand-mark">Movth</p>
+        <nav className="top-nav watch-nav">
+          <a className="brand-mark" href="/">
+            Movth
+          </a>
           <LogoutButton />
         </nav>
         <section className="watch-placeholder">
@@ -44,18 +56,23 @@ export default async function WatchPage({ params }: WatchPageProps) {
     );
   }
 
+  const initialPositionS = await getInitialPosition(profileId, watch.body.data);
+
   return (
-    <main className="watch-page">
-      <nav className="top-nav">
-        <p className="brand-mark">Movth</p>
+    <main className="watch-page watch-player-page">
+      <nav className="top-nav watch-nav">
+        <a className="brand-mark" href="/">
+          Movth
+        </a>
         <LogoutButton />
       </nav>
-      <section className="watch-placeholder">
-        <p className="eyebrow">Player HLS</p>
-        <h1>Stream autorizado.</h1>
-        <p>Manifesto: {watch.body.data.manifestUrl}</p>
-        <p>Qualidade: {watch.body.data.quality}</p>
-      </section>
+      <HlsPlayer
+        episodeId={watch.body.data.episodeId}
+        initialPositionS={initialPositionS}
+        manifestUrl={watch.body.data.manifestUrl}
+        profileId={profileId}
+        titleId={watch.body.data.titleId}
+      />
     </main>
   );
 }
