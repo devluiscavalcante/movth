@@ -18,7 +18,11 @@ const envSchema = z.object({
   TRANSCODE_QUEUE_NAME: z.string().default("transcode"),
   STRIPE_SECRET_KEY: z.string().default("sk_test_replace_me"),
   STRIPE_WEBHOOK_SECRET: z.string().default("whsec_replace_me"),
-  WEB_URL: z.string().url().default("http://localhost:3000")
+  WEB_URL: z.string().url().default("http://localhost:3000"),
+  TMDB_API_TOKEN: z.string().optional(),
+  TMDB_LANGUAGE: z.string().default("pt-BR"),
+  DEMO_MOVIE_HLS_URL: z.string().url().default("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+  DEMO_SERIES_HLS_URL: z.string().url().default("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
 });
 
 const parsedEnv = envSchema.parse(process.env);

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import type { Genre, TitleAsset } from "../lib/session";
 
@@ -42,6 +43,17 @@ type UploadResponse = {
 type QueueResponse = {
   jobId: string | number | null;
   status: string;
+};
+
+type TmdbSearchItem = {
+  id: number;
+  mediaType: "movie" | "tv";
+  title: string;
+  synopsis: string;
+  releaseYear: number | null;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  voteAverage: number;
 };
 
 type ApiEnvelope<T> = {
@@ -114,6 +126,7 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
   const [selectedTitleId, setSelectedTitleId] = useState(initialTitles[0]?.id ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [upload, setUpload] = useState<UploadResponse | null>(null);
+  const [tmdbResults, setTmdbResults] = useState<TmdbSearchItem[]>([]);
   const [busy, setBusy] = useState(false);
 
   const selectedTitle = useMemo(
@@ -148,6 +161,66 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
       setMessage("Titulo criado.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao criar titulo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function searchTmdb(formData: FormData) {
+    const query = String(formData.get("q") ?? "").trim();
+    const type = String(formData.get("type") ?? "movie");
+
+    if (!query) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        type
+      });
+      const results = await parseResponse<TmdbSearchItem[]>(
+        await fetch(`/api/admin/tmdb/search?${params.toString()}`)
+      );
+
+      setTmdbResults(results);
+      setMessage(`${results.length} resultado(s) encontrados no TMDB.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao buscar no TMDB.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importTmdb(item: TmdbSearchItem) {
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const imported = await parseResponse<AdminTitle>(
+        await fetch("/api/admin/tmdb/import", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            tmdbId: item.id,
+            type: item.mediaType,
+            withDemoAsset: true,
+            maxSeasons: 1,
+            maxEpisodesPerSeason: 6
+          })
+        })
+      );
+
+      await reloadTitles(imported.id);
+      setTmdbResults([]);
+      setMessage("Titulo importado com asset HLS demo.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao importar do TMDB.");
     } finally {
       setBusy(false);
     }
@@ -506,6 +579,62 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
           Criar titulo
         </button>
       </form>
+
+      <div className="admin-panel admin-tmdb-panel">
+        <div>
+          <p className="panel-label">TMDB</p>
+          <h2>Importar catalogo</h2>
+        </div>
+        <form
+          className="admin-inline-form tmdb-search-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void searchTmdb(new FormData(event.currentTarget));
+          }}
+        >
+          <label>
+            Busca
+            <input name="q" placeholder="Matrix, Breaking Bad..." required />
+          </label>
+          <label>
+            Tipo
+            <select defaultValue="movie" name="type" required>
+              <option value="movie">Filme</option>
+              <option value="tv">Serie</option>
+            </select>
+          </label>
+          <button className="secondary-action" disabled={busy} type="submit">
+            Buscar
+          </button>
+        </form>
+
+        {tmdbResults.length > 0 ? (
+          <div className="tmdb-results">
+            {tmdbResults.map((item) => (
+              <article className="tmdb-result" key={`${item.mediaType}:${item.id}`}>
+                <div className="tmdb-poster">
+                  {item.posterUrl ? (
+                    <Image alt="" height={108} src={item.posterUrl} width={72} />
+                  ) : (
+                    item.title.slice(0, 1)
+                  )}
+                </div>
+                <div>
+                  <strong>{item.title}</strong>
+                  <p>
+                    {item.releaseYear ?? "Ano indisponivel"} -{" "}
+                    {item.mediaType === "movie" ? "Filme" : "Serie"}
+                  </p>
+                  <p>{item.synopsis || "Sinopse indisponivel."}</p>
+                </div>
+                <button className="primary-action" disabled={busy} onClick={() => importTmdb(item)} type="button">
+                  Importar com demo
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       <div className="admin-panel admin-detail-panel">
         <div>
