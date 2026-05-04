@@ -635,6 +635,7 @@ button:disabled {
   position: absolute;
   right: 0;
   top: 0;
+  transition: opacity 180ms ease;
   z-index: 7;
 }
 
@@ -666,12 +667,14 @@ button:disabled {
 }
 
 .video-stage video {
+  cursor: pointer;
   height: 100%;
   max-height: 100vh;
   object-fit: contain;
   width: 100%;
 }
 
+.player-loading,
 .player-error {
   background: rgba(0, 0, 0, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -685,6 +688,17 @@ button:disabled {
   text-align: center;
   top: 50%;
   transform: translate(-50%, -50%);
+  z-index: 11;
+}
+
+.player-error {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+}
+
+.player-error p {
+  margin: 0;
 }
 
 .next-episode-overlay {
@@ -713,6 +727,10 @@ button:disabled {
   text-transform: uppercase;
 }
 
+.next-episode-overlay span {
+  color: var(--muted);
+}
+
 .player-controls {
   align-items: center;
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.92) 18%);
@@ -724,7 +742,18 @@ button:disabled {
   padding: 22px 28px 18px;
   position: absolute;
   right: 0;
+  transition: opacity 180ms ease;
   z-index: 8;
+}
+
+.player-shell.is-chrome-hidden .player-title-overlay,
+.player-shell.is-chrome-hidden .player-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.player-shell.is-chrome-hidden .video-stage video {
+  cursor: none;
 }
 
 .control-button,
@@ -751,7 +780,7 @@ button:disabled {
 }
 
 .volume-control {
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
 }
 
 .time-control input,
