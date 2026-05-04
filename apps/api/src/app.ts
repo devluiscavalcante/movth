@@ -8,6 +8,7 @@ import { prisma } from "@movth/db";
 import { env } from "./config/env.js";
 import { ApiError } from "./lib/api-error.js";
 import { adminCatalogRoutes } from "./routes/admin-catalog.js";
+import { adminTmdbRoutes } from "./routes/admin-tmdb.js";
 import { adminUploadRoutes } from "./routes/admin-upload.js";
 import { authRoutes } from "./routes/auth.js";
 import { catalogRoutes } from "./routes/catalog.js";
@@ -116,6 +117,7 @@ export function buildApp() {
   app.register(catalogRoutes);
   app.register(engagementRoutes);
   app.register(adminCatalogRoutes, { prefix: "/admin" });
+  app.register(adminTmdbRoutes, { prefix: "/admin" });
   app.register(adminUploadRoutes, { prefix: "/admin" });
   app.register(subscriptionRoutes, { prefix: "/subscription" });
   app.register(watchRoutes);
