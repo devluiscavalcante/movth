@@ -115,6 +115,19 @@ export type WatchResponse = {
   manifestUrl: string;
   expiresAt: string;
   sessionId: string;
+  title: {
+    id: string;
+    type: "MOVIE" | "SERIES";
+    title: string;
+    releaseYear: number;
+    rating: string;
+  };
+  episode: {
+    id: string;
+    season: number;
+    number: number;
+    durationS: number;
+  } | null;
 };
 
 type TokenPairResponse = {

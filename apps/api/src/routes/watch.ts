@@ -168,7 +168,22 @@ export async function watchRoutes(app: FastifyInstance) {
         quality: asset.quality,
         manifestUrl: asset.hlsManifestUrl,
         expiresAt,
-        sessionId: session.id
+        sessionId: session.id,
+        title: {
+          id: asset.title.id,
+          type: asset.title.type,
+          title: asset.title.title,
+          releaseYear: asset.title.releaseYear,
+          rating: asset.title.rating
+        },
+        episode: asset.episode
+          ? {
+              id: asset.episode.id,
+              season: asset.episode.season,
+              number: asset.episode.number,
+              durationS: asset.episode.durationS
+            }
+          : null
       });
     }
   );
