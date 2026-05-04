@@ -1,7 +1,7 @@
 "use client";
 
 import Hls from "hls.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type HlsPlayerProps = {
   manifestUrl: string;
@@ -62,14 +62,19 @@ export function HlsPlayer({
   const hlsRef = useRef<Hls | null>(null);
   const lastSavedRef = useRef(0);
   const completedSavedRef = useRef(false);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(initialPositionS);
   const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [ended, setEnded] = useState(false);
+  const [buffering, setBuffering] = useState(true);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [nextCountdown, setNextCountdown] = useState(10);
 
   const progress = useMemo(() => {
     if (!duration) {
@@ -79,12 +84,33 @@ export function HlsPlayer({
     return Math.min(100, Math.max(0, (currentTime / duration) * 100));
   }, [currentTime, duration]);
 
+  const saveProgress = useCallback(async (positionS: number, completed = false) => {
+    await fetch("/api/history", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        profileId,
+        titleId,
+        ...(episodeId ? { episodeId } : {}),
+        positionS: Math.max(0, Math.floor(positionS)),
+        completed
+      })
+    }).catch(() => undefined);
+  }, [episodeId, profileId, titleId]);
+
   useEffect(() => {
     const video = videoRef.current;
 
     if (!video) {
       return;
     }
+
+    setError(null);
+    setBuffering(true);
+    setLevels([]);
+    setSelectedLevel(-1);
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = manifestUrl;
@@ -98,6 +124,7 @@ export function HlsPlayer({
       hls.loadSource(manifestUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+        setBuffering(false);
         setLevels(
           data.levels.map((level, index) => ({
             index,
@@ -108,10 +135,12 @@ export function HlsPlayer({
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           setError("Nao foi possivel carregar o stream HLS.");
+          setBuffering(false);
         }
       });
     } else {
       setError("Este navegador nao suporta reproducao HLS.");
+      setBuffering(false);
     }
 
     return () => {
@@ -128,23 +157,74 @@ export function HlsPlayer({
     }
 
     video.volume = volume;
-  }, [volume]);
+    video.muted = muted;
+  }, [muted, volume]);
 
-  async function saveProgress(positionS: number, completed = false) {
-    await fetch("/api/history", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        profileId,
-        titleId,
-        ...(episodeId ? { episodeId } : {}),
-        positionS: Math.max(0, Math.floor(positionS)),
-        completed
-      })
-    }).catch(() => undefined);
-  }
+  useEffect(() => {
+    if (!ended || !nextHref) {
+      return;
+    }
+
+    setNextCountdown(10);
+    const intervalId = window.setInterval(() => {
+      setNextCountdown((current) => {
+        if (current <= 1) {
+          window.location.href = nextHref;
+          window.clearInterval(intervalId);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [ended, nextHref]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+
+      if (target?.tagName === "INPUT" || target?.tagName === "SELECT") {
+        return;
+      }
+
+      if (event.key === " ") {
+        event.preventDefault();
+        void togglePlay();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        seekBy(10);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        seekBy(-10);
+      } else if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        setMuted((current) => !current);
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        void enterFullscreen();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
+
+  useEffect(() => {
+    function saveBeforeExit() {
+      const video = videoRef.current;
+
+      if (video && video.currentTime > 0 && !ended) {
+        void saveProgress(video.currentTime);
+      }
+    }
+
+    window.addEventListener("pagehide", saveBeforeExit);
+
+    return () => window.removeEventListener("pagehide", saveBeforeExit);
+  }, [ended, saveProgress]);
 
   async function togglePlay() {
     const video = videoRef.current;
@@ -167,8 +247,19 @@ export function HlsPlayer({
       return;
     }
 
-    video.currentTime = value;
-    setCurrentTime(value);
+    const nextValue = Math.min(Math.max(value, 0), duration || value);
+    video.currentTime = nextValue;
+    setCurrentTime(nextValue);
+  }
+
+  function seekBy(delta: number) {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    seekTo(video.currentTime + delta);
   }
 
   function changeLevel(value: number) {
@@ -184,8 +275,38 @@ export function HlsPlayer({
     await container?.requestFullscreen?.().catch(() => undefined);
   }
 
+  function revealControls() {
+    setControlsVisible(true);
+
+    if (controlsTimerRef.current) {
+      clearTimeout(controlsTimerRef.current);
+    }
+
+    if (playing) {
+      controlsTimerRef.current = setTimeout(() => setControlsVisible(false), 2600);
+    }
+  }
+
+  function retryStream() {
+    setError(null);
+    setBuffering(true);
+    hlsRef.current?.destroy();
+    hlsRef.current = null;
+
+    const video = videoRef.current;
+
+    if (video) {
+      video.load();
+    }
+
+    window.location.reload();
+  }
+
   return (
-    <section className="player-shell">
+    <section
+      className={controlsVisible || !playing ? "player-shell" : "player-shell is-chrome-hidden"}
+      onMouseMove={revealControls}
+    >
       <div className="video-stage">
         <div className="player-title-overlay">
           <a href={backHref}>Voltar</a>
@@ -195,22 +316,41 @@ export function HlsPlayer({
           </div>
         </div>
         <video
+          autoPlay
+          onClick={() => void togglePlay()}
           onDurationChange={(event) => setDuration(event.currentTarget.duration)}
           onEnded={(event) => {
             setPlaying(false);
             setEnded(true);
+            setControlsVisible(true);
             void saveProgress(event.currentTarget.duration, true);
           }}
           onLoadedMetadata={(event) => {
-            if (initialPositionS > 0 && event.currentTarget.duration > initialPositionS) {
-              event.currentTarget.currentTime = initialPositionS;
+            const safeInitialPosition =
+              event.currentTarget.duration > 0 && initialPositionS / event.currentTarget.duration < 0.95
+                ? initialPositionS
+                : 0;
+
+            if (safeInitialPosition > 0 && event.currentTarget.duration > safeInitialPosition) {
+              event.currentTarget.currentTime = safeInitialPosition;
             }
           }}
-          onPause={() => setPlaying(false)}
+          onPause={(event) => {
+            setPlaying(false);
+            setControlsVisible(true);
+            if (!ended && event.currentTarget.currentTime > 0) {
+              void saveProgress(event.currentTarget.currentTime);
+            }
+          }}
           onPlay={() => {
             setPlaying(true);
             setEnded(false);
+            revealControls();
           }}
+          onStalled={() => setBuffering(true)}
+          onWaiting={() => setBuffering(true)}
+          onCanPlay={() => setBuffering(false)}
+          onPlaying={() => setBuffering(false)}
           onTimeUpdate={(event) => {
             const nextTime = event.currentTarget.currentTime;
             setCurrentTime(nextTime);
@@ -232,13 +372,22 @@ export function HlsPlayer({
           playsInline
           ref={videoRef}
         />
-        {error ? <p className="player-error">{error}</p> : null}
+        {buffering && !error ? <p className="player-loading">Carregando...</p> : null}
+        {error ? (
+          <div className="player-error">
+            <p>{error}</p>
+            <button className="secondary-action" onClick={retryStream} type="button">
+              Tentar novamente
+            </button>
+          </div>
+        ) : null}
         {ended && nextHref ? (
           <div className="next-episode-overlay">
             <p>Proximo episodio</p>
             <a className="primary-action" href={nextHref}>
               Assistir {nextLabel}
             </a>
+            <span>Iniciando em {nextCountdown}s</span>
           </div>
         ) : null}
       </div>
@@ -261,7 +410,9 @@ export function HlsPlayer({
           <span>{formatTime(duration)}</span>
         </div>
         <div className="volume-control">
-          <span>Volume</span>
+          <button className="control-button" onClick={() => setMuted((current) => !current)} type="button">
+            {muted ? "Mudo" : "Som"}
+          </button>
           <input
             aria-label="Volume"
             max={1}
@@ -285,7 +436,7 @@ export function HlsPlayer({
           ))}
         </select>
         <button className="control-button" onClick={() => void enterFullscreen()} type="button">
-          Tela cheia
+          Fullscreen
         </button>
       </div>
       <div className="progress-meter" aria-hidden="true">
