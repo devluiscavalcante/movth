@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { prisma, VideoAssetStatus, VideoQuality } from "@movth/db";
-import { forbidden, notFound, unauthorized } from "../lib/api-error.js";
+import { prisma, TitleType, VideoAssetStatus, VideoQuality } from "@movth/db";
+import { badRequest, forbidden, notFound, unauthorized } from "../lib/api-error.js";
 import { sendData } from "../lib/reply.js";
 import { requireActivePlan } from "../middleware/require-active-plan.js";
 import { requireAuth } from "../middleware/require-auth.js";
@@ -13,6 +13,14 @@ const watchParamsSchema = z.object({
 const watchQuerySchema = z.object({
   sessionId: z.string().uuid().optional(),
   deviceType: z.string().trim().min(1).max(40).default("web")
+});
+
+const playTitleParamsSchema = z.object({
+  titleId: z.string().uuid()
+});
+
+const playTitleQuerySchema = z.object({
+  profileId: z.string().uuid()
 });
 
 const STREAM_SESSION_TTL_MS = 5 * 60 * 1000;
@@ -51,6 +59,181 @@ function clientIp(request: FastifyRequest) {
   }
 
   return request.ip;
+}
+
+async function assertProfileOwner(profileId: string, userId: string) {
+  const profile = await prisma.profile.findFirst({
+    where: {
+      id: profileId,
+      userId
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (!profile) {
+    throw notFound("PROFILE_NOT_FOUND", "Profile not found");
+  }
+}
+
+function playableAssetFromList<T extends { id: string; status: VideoAssetStatus; quality: VideoQuality }>(
+  assets: T[]
+) {
+  return (
+    assets.find((asset) => asset.status === VideoAssetStatus.READY && asset.quality === VideoQuality.HD) ??
+    assets.find((asset) => asset.status === VideoAssetStatus.READY) ??
+    null
+  );
+}
+
+async function resolvePlayableAsset(titleId: string, profileId: string) {
+  const title = await prisma.title.findUnique({
+    where: { id: titleId },
+    include: {
+      videoAssets: {
+        where: {
+          episodeId: null,
+          status: VideoAssetStatus.READY
+        }
+      },
+      episodes: {
+        include: {
+          videoAssets: {
+            where: {
+              status: VideoAssetStatus.READY
+            }
+          }
+        },
+        orderBy: [{ season: "asc" }, { number: "asc" }]
+      }
+    }
+  });
+
+  if (!title) {
+    throw notFound("TITLE_NOT_FOUND", "Title not found");
+  }
+
+  if (title.type === TitleType.MOVIE) {
+    const asset = playableAssetFromList(title.videoAssets);
+
+    if (!asset) {
+      throw notFound("ASSET_NOT_FOUND", "Playable asset not found");
+    }
+
+    return {
+      asset,
+      reason: "movie"
+    };
+  }
+
+  const latestHistory = await prisma.watchHistory.findFirst({
+    where: {
+      profileId,
+      titleId,
+      completed: false,
+      positionS: {
+        gt: 0
+      }
+    },
+    include: {
+      episode: true
+    },
+    orderBy: {
+      updatedAt: "desc"
+    }
+  });
+
+  if (latestHistory?.episodeId) {
+    const currentEpisode = title.episodes.find((episode) => episode.id === latestHistory.episodeId);
+    const asset = currentEpisode ? playableAssetFromList(currentEpisode.videoAssets) : null;
+
+    if (asset) {
+      return {
+        asset,
+        reason: "resume"
+      };
+    }
+  }
+
+  const firstPlayableEpisode = title.episodes.find((episode) => playableAssetFromList(episode.videoAssets));
+  const asset = firstPlayableEpisode ? playableAssetFromList(firstPlayableEpisode.videoAssets) : null;
+
+  if (!asset) {
+    throw notFound("ASSET_NOT_FOUND", "Playable episode asset not found");
+  }
+
+  return {
+    asset,
+    reason: "first_episode"
+  };
+}
+
+async function nextEpisodeAsset(input: { titleId: string; episodeId: string | null }) {
+  if (!input.episodeId) {
+    return null;
+  }
+
+  const currentEpisode = await prisma.episode.findUnique({
+    where: { id: input.episodeId },
+    select: {
+      season: true,
+      number: true
+    }
+  });
+
+  if (!currentEpisode) {
+    return null;
+  }
+
+  const nextEpisode = await prisma.episode.findFirst({
+    where: {
+      titleId: input.titleId,
+      OR: [
+        {
+          season: currentEpisode.season,
+          number: {
+            gt: currentEpisode.number
+          }
+        },
+        {
+          season: {
+            gt: currentEpisode.season
+          }
+        }
+      ],
+      videoAssets: {
+        some: {
+          status: VideoAssetStatus.READY
+        }
+      }
+    },
+    include: {
+      videoAssets: {
+        where: {
+          status: VideoAssetStatus.READY
+        }
+      }
+    },
+    orderBy: [{ season: "asc" }, { number: "asc" }]
+  });
+
+  if (!nextEpisode) {
+    return null;
+  }
+
+  const asset = playableAssetFromList(nextEpisode.videoAssets);
+
+  if (!asset) {
+    return null;
+  }
+
+  return {
+    assetId: asset.id,
+    episodeId: nextEpisode.id,
+    season: nextEpisode.season,
+    number: nextEpisode.number
+  };
 }
 
 async function upsertStreamSession(input: {
@@ -116,6 +299,34 @@ async function upsertStreamSession(input: {
 
 export async function watchRoutes(app: FastifyInstance) {
   app.get(
+    "/play/title/:titleId",
+    {
+      preHandler: [requireAuth, requireActivePlan]
+    },
+    async (request, reply) => {
+      if (!request.authUser) {
+        throw unauthorized();
+      }
+
+      const params = playTitleParamsSchema.parse(request.params);
+      const query = playTitleQuerySchema.parse(request.query);
+      await assertProfileOwner(query.profileId, request.authUser.userId);
+      const resolved = await resolvePlayableAsset(params.titleId, query.profileId);
+
+      if (!resolved.asset) {
+        throw badRequest("PLAYBACK_NOT_RESOLVED", "Could not resolve playback target");
+      }
+
+      return sendData(reply, {
+        titleId: params.titleId,
+        assetId: resolved.asset.id,
+        episodeId: resolved.asset.episodeId,
+        reason: resolved.reason
+      });
+    }
+  );
+
+  app.get(
     "/watch/:assetId",
     {
       preHandler: [requireAuth, requireActivePlan]
@@ -160,6 +371,10 @@ export async function watchRoutes(app: FastifyInstance) {
         ipAddress: clientIp(request)
       });
       const expiresAt = new Date(Date.now() + MANIFEST_TTL_MS);
+      const nextEpisode = await nextEpisodeAsset({
+        titleId: asset.titleId,
+        episodeId: asset.episodeId
+      });
 
       return sendData(reply, {
         assetId: asset.id,
@@ -183,7 +398,8 @@ export async function watchRoutes(app: FastifyInstance) {
               number: asset.episode.number,
               durationS: asset.episode.durationS
             }
-          : null
+          : null,
+        nextEpisode
       });
     }
   );

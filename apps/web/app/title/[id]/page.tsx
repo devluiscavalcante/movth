@@ -105,7 +105,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
           <p>{data.title.synopsis}</p>
           <div className="hero-actions">
             {titleAsset ? (
-              <a className="primary-action" href={`/watch/${titleAsset.id}`}>
+              <a className="primary-action" href={`/play/title/${data.title.id}`}>
                 ▶ Assistir
               </a>
             ) : null}

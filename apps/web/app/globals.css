@@ -687,6 +687,32 @@ button:disabled {
   transform: translate(-50%, -50%);
 }
 
+.next-episode-overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  left: 50%;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 20px;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  z-index: 9;
+}
+
+.next-episode-overlay p {
+  color: var(--muted);
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+}
+
 .player-controls {
   align-items: center;
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.92) 18%);

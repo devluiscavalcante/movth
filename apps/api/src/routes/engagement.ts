@@ -275,10 +275,23 @@ export async function engagementRoutes(app: FastifyInstance) {
       },
       include: historyInclude(),
       orderBy: { updatedAt: "desc" },
-      take: 20
+      take: 50
     });
+    const latestByTitle = new Map<string, (typeof history)[number]>();
 
-    return sendData(reply, history.map(publicHistoryItem));
+    for (const item of history) {
+      if (latestByTitle.has(item.titleId)) {
+        continue;
+      }
+
+      if (item.episode && item.positionS / item.episode.durationS >= 0.95) {
+        continue;
+      }
+
+      latestByTitle.set(item.titleId, item);
+    }
+
+    return sendData(reply, Array.from(latestByTitle.values()).slice(0, 20).map(publicHistoryItem));
   });
 
   app.post("/watchlist", async (request, reply) => {

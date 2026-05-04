@@ -15,7 +15,7 @@ function imageForTitle(title: Title) {
 
 export function TitleCard({ title, profileId, inWatchlist = false, progressLabel }: TitleCardProps) {
   const imageUrl = imageForTitle(title);
-  const playableAsset = title.assets?.find((asset) => asset.status === "READY") ?? title.assets?.[0];
+  const hasPlayableAsset = Boolean(title.assets?.some((asset) => asset.status === "READY"));
 
   return (
     <article className="title-card">
@@ -28,8 +28,8 @@ export function TitleCard({ title, profileId, inWatchlist = false, progressLabel
           )}
         </a>
         <div className="poster-actions">
-          {playableAsset ? (
-            <a className="play-action" href={`/watch/${playableAsset.id}`}>
+          {hasPlayableAsset ? (
+            <a className="play-action" href={`/play/title/${title.id}`}>
               ▶
             </a>
           ) : null}

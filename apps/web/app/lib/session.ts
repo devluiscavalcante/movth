@@ -128,6 +128,12 @@ export type WatchResponse = {
     number: number;
     durationS: number;
   } | null;
+  nextEpisode: {
+    assetId: string;
+    episodeId: string;
+    season: number;
+    number: number;
+  } | null;
 };
 
 type TokenPairResponse = {

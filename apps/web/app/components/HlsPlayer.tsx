@@ -12,6 +12,8 @@ type HlsPlayerProps = {
   titleLabel: string;
   subtitle: string;
   backHref: string;
+  nextHref: string | null;
+  nextLabel: string | null;
 };
 
 type QualityLevel = {
@@ -52,11 +54,14 @@ export function HlsPlayer({
   initialPositionS,
   titleLabel,
   subtitle,
-  backHref
+  backHref,
+  nextHref,
+  nextLabel
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const lastSavedRef = useRef(0);
+  const completedSavedRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(initialPositionS);
@@ -64,6 +69,7 @@ export function HlsPlayer({
   const [levels, setLevels] = useState<QualityLevel[]>([]);
   const [selectedLevel, setSelectedLevel] = useState(-1);
   const [error, setError] = useState<string | null>(null);
+  const [ended, setEnded] = useState(false);
 
   const progress = useMemo(() => {
     if (!duration) {
@@ -192,6 +198,7 @@ export function HlsPlayer({
           onDurationChange={(event) => setDuration(event.currentTarget.duration)}
           onEnded={(event) => {
             setPlaying(false);
+            setEnded(true);
             void saveProgress(event.currentTarget.duration, true);
           }}
           onLoadedMetadata={(event) => {
@@ -200,20 +207,40 @@ export function HlsPlayer({
             }
           }}
           onPause={() => setPlaying(false)}
-          onPlay={() => setPlaying(true)}
+          onPlay={() => {
+            setPlaying(true);
+            setEnded(false);
+          }}
           onTimeUpdate={(event) => {
             const nextTime = event.currentTarget.currentTime;
             setCurrentTime(nextTime);
 
             if (nextTime - lastSavedRef.current >= 10) {
               lastSavedRef.current = nextTime;
-              void saveProgress(nextTime);
+              const completed = duration > 0 && nextTime / duration >= 0.95;
+
+              if (completed) {
+                completedSavedRef.current = true;
+              }
+
+              void saveProgress(nextTime, completed);
+            } else if (!completedSavedRef.current && duration > 0 && nextTime / duration >= 0.95) {
+              completedSavedRef.current = true;
+              void saveProgress(nextTime, true);
             }
           }}
           playsInline
           ref={videoRef}
         />
         {error ? <p className="player-error">{error}</p> : null}
+        {ended && nextHref ? (
+          <div className="next-episode-overlay">
+            <p>Proximo episodio</p>
+            <a className="primary-action" href={nextHref}>
+              Assistir {nextLabel}
+            </a>
+          </div>
+        ) : null}
       </div>
 
       <div className="player-controls">
