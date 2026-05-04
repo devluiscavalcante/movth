@@ -20,11 +20,13 @@ export function TitleCard({ title, profileId, inWatchlist = false, progressLabel
   return (
     <article className="title-card">
       <div className="poster-frame">
-        {imageUrl ? (
-          <Image alt="" fill sizes="220px" src={imageUrl} unoptimized />
-        ) : (
-          <span>{title.title.slice(0, 1).toUpperCase()}</span>
-        )}
+        <a className="poster-link" href={`/title/${title.id}`}>
+          {imageUrl ? (
+            <Image alt="" fill sizes="220px" src={imageUrl} unoptimized />
+          ) : (
+            <span>{title.title.slice(0, 1).toUpperCase()}</span>
+          )}
+        </a>
         <div className="poster-actions">
           {playableAsset ? (
             <a className="play-action" href={`/watch/${playableAsset.id}`}>

@@ -458,6 +458,14 @@ button:disabled {
   position: relative;
 }
 
+.poster-link {
+  align-items: center;
+  display: grid;
+  inset: 0;
+  justify-items: center;
+  position: absolute;
+}
+
 .poster-frame img {
   height: 100%;
   object-fit: cover;
@@ -567,6 +575,131 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.title-detail-page {
+  background: var(--background);
+  min-height: 100vh;
+  padding-bottom: 56px;
+}
+
+.detail-nav {
+  left: 0;
+  padding: 24px 40px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 5;
+}
+
+.title-detail-hero {
+  align-items: center;
+  background-color: #101010;
+  background-position: center right;
+  background-size: cover;
+  display: grid;
+  gap: 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  min-height: 74vh;
+  padding: 104px 40px 72px;
+}
+
+.title-detail-copy {
+  max-width: 760px;
+}
+
+.title-detail-copy h1 {
+  font-size: clamp(3rem, 9vw, 6.4rem);
+  letter-spacing: 0;
+  line-height: 0.98;
+  margin: 14px 0 18px;
+}
+
+.title-detail-copy p {
+  color: #e5e5e5;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  margin: 20px 0 0;
+  max-width: 680px;
+}
+
+.title-detail-poster {
+  aspect-ratio: 2 / 3;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  position: relative;
+}
+
+.title-detail-poster img {
+  object-fit: cover;
+}
+
+.episodes-section,
+.title-detail-content {
+  padding: 36px 40px 0;
+}
+
+.episodes-section h2 {
+  font-size: 1.5rem;
+  letter-spacing: 0;
+  margin: 0 0 18px;
+}
+
+.season-list {
+  display: grid;
+  gap: 24px;
+  max-width: 980px;
+}
+
+.season-group {
+  display: grid;
+  gap: 12px;
+}
+
+.season-group h3 {
+  color: var(--muted);
+  font-size: 1rem;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.episode-list {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.episode-row {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  min-height: 82px;
+  padding: 16px 18px;
+}
+
+.episode-row + .episode-row {
+  border-top: 1px solid var(--border);
+}
+
+.episode-row h4 {
+  font-size: 1rem;
+  letter-spacing: 0;
+  margin: 0 0 6px;
+}
+
+.episode-row p,
+.episode-unavailable {
+  color: var(--muted);
+  margin: 0;
+}
+
+.episode-row .secondary-action {
+  flex: 0 0 auto;
+  min-height: 40px;
+}
+
 @media (max-width: 760px) {
   .auth-panel {
     padding: 24px;
@@ -608,5 +741,30 @@ button:disabled {
 
   .title-rail {
     grid-auto-columns: minmax(138px, 42vw);
+  }
+
+  .detail-nav {
+    padding: 18px;
+  }
+
+  .title-detail-hero {
+    grid-template-columns: 1fr;
+    min-height: 72vh;
+    padding: 92px 18px 48px;
+  }
+
+  .title-detail-poster {
+    display: none;
+  }
+
+  .episodes-section,
+  .title-detail-content {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .episode-row {
+    align-items: stretch;
+    display: grid;
   }
 }
