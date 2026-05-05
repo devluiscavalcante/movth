@@ -6,7 +6,7 @@ import { TitleCard } from "./components/TitleCard";
 import { WatchlistButton } from "./components/WatchlistButton";
 import {
   PROFILE_COOKIE,
-  type Genre,
+  type DiscoveryHomeResponse,
   type Title,
   type WatchHistoryItem,
   type WatchlistItem,
@@ -27,37 +27,21 @@ function titleIdsFromWatchlist(items: WatchlistItem[]) {
 }
 
 async function getHomeData(profileId: string) {
-  const [titles, genres, continueWatching, watchlist] = await Promise.all([
-    serverApi<Title[]>("/titles?pageSize=20"),
-    serverApi<Genre[]>("/genres"),
-    serverApi<WatchHistoryItem[]>(`/continue-watching?profileId=${profileId}`),
-    serverApi<WatchlistItem[]>(`/watchlist?profileId=${profileId}&pageSize=20`)
-  ]);
+  const discovery = await serverApi<DiscoveryHomeResponse>(
+    `/discovery/home?profileId=${profileId}`
+  );
+  const rows = discovery.body.data?.rows;
 
   return {
-    titles: titles.body.data ?? [],
-    genres: genres.body.data ?? [],
-    continueWatching: continueWatching.body.data ?? [],
-    watchlist: watchlist.body.data ?? []
+    hero: discovery.body.data?.hero ?? null,
+    continueWatching: rows?.continueWatching ?? [],
+    watchlist: rows?.watchlist ?? [],
+    popular: rows?.popular ?? [],
+    movies: rows?.movies ?? [],
+    series: rows?.series ?? [],
+    recent: rows?.recent ?? [],
+    genres: rows?.genres ?? []
   };
-}
-
-async function getTitlesByGenre(genres: Genre[]) {
-  const selectedGenres = genres.slice(0, 4);
-  const results = await Promise.all(
-    selectedGenres.map(async (genre) => {
-      const response = await serverApi<Title[]>(
-        `/titles?genre=${encodeURIComponent(genre.slug)}&pageSize=12`
-      );
-
-      return {
-        genre,
-        titles: response.body.data ?? []
-      };
-    })
-  );
-
-  return results.filter((group) => group.titles.length > 0);
 }
 
 export default async function HomePage() {
@@ -69,8 +53,8 @@ export default async function HomePage() {
   }
 
   const homeData = await getHomeData(profileId);
-  const genreRows = await getTitlesByGenre(homeData.genres);
-  const heroTitle = homeData.titles[0];
+  const genreRows = homeData.genres;
+  const heroTitle = homeData.hero ?? homeData.recent[0];
   const watchlistIds = titleIdsFromWatchlist(homeData.watchlist);
   const heroHasPlayableAsset = Boolean(heroTitle?.assets?.some((asset) => asset.status === "READY"));
 
@@ -148,8 +132,41 @@ export default async function HomePage() {
           ))}
         </Carousel>
 
+        <Carousel title="Populares no Movth">
+          {homeData.popular.map((title) => (
+            <TitleCard
+              inWatchlist={watchlistIds.has(title.id)}
+              key={title.id}
+              profileId={profileId}
+              title={title}
+            />
+          ))}
+        </Carousel>
+
+        <Carousel title="Filmes">
+          {homeData.movies.map((title) => (
+            <TitleCard
+              inWatchlist={watchlistIds.has(title.id)}
+              key={title.id}
+              profileId={profileId}
+              title={title}
+            />
+          ))}
+        </Carousel>
+
+        <Carousel title="Series">
+          {homeData.series.map((title) => (
+            <TitleCard
+              inWatchlist={watchlistIds.has(title.id)}
+              key={title.id}
+              profileId={profileId}
+              title={title}
+            />
+          ))}
+        </Carousel>
+
         <Carousel title="Adicionados recentemente">
-          {homeData.titles.map((title) => (
+          {homeData.recent.map((title) => (
             <TitleCard
               inWatchlist={watchlistIds.has(title.id)}
               key={title.id}

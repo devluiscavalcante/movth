@@ -9,6 +9,7 @@ import {
   PROFILE_COOKIE,
   type EpisodesResponse,
   type Title,
+  type WatchHistoryItem,
   type WatchlistItem,
   requireUser,
   serverApi
@@ -24,6 +25,21 @@ function firstReadyAsset(title: Title) {
   return title.assets?.find((asset) => asset.status === "READY") ?? title.assets?.[0];
 }
 
+function firstEpisodeAsset(seasons: EpisodesResponse["seasons"]) {
+  for (const season of seasons) {
+    for (const episode of season.episodes) {
+      const asset =
+        episode.videoAssets.find((item) => item.status === "READY") ?? episode.videoAssets[0];
+
+      if (asset) {
+        return asset;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function formatDuration(seconds: number) {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return `${minutes} min`;
@@ -36,11 +52,12 @@ async function getTitlePageData(titleId: string, profileId: string) {
     notFound();
   }
 
-  const [episodes, watchlist, similar] = await Promise.all([
+  const [episodes, watchlist, history, similar] = await Promise.all([
     title.body.data.type === "SERIES"
       ? serverApi<EpisodesResponse>(`/titles/${titleId}/episodes`)
       : Promise.resolve({ body: { data: { seasons: [] } } }),
     serverApi<WatchlistItem[]>(`/watchlist?profileId=${profileId}&pageSize=50`),
+    serverApi<WatchHistoryItem[]>(`/history?profileId=${profileId}&pageSize=50`),
     title.body.data.genres[0]
       ? serverApi<Title[]>(
           `/titles?genre=${encodeURIComponent(title.body.data.genres[0].slug)}&pageSize=12`
@@ -52,6 +69,7 @@ async function getTitlePageData(titleId: string, profileId: string) {
     title: title.body.data,
     seasons: episodes.body.data?.seasons ?? [],
     watchlist: watchlist.body.data ?? [],
+    history: (history.body.data ?? []).filter((item) => item.titleId === titleId),
     similar: (similar.body.data ?? []).filter((item) => item.id !== titleId)
   };
 }
@@ -66,7 +84,10 @@ export default async function TitlePage({ params }: TitlePageProps) {
 
   const data = await getTitlePageData(params.id, profileId);
   const titleAsset = firstReadyAsset(data.title);
+  const startAsset = data.title.type === "SERIES" ? firstEpisodeAsset(data.seasons) : titleAsset;
   const inWatchlist = data.watchlist.some((item) => item.titleId === data.title.id);
+  const latestHistory = data.history.find((item) => !item.completed) ?? data.history[0];
+  const progressMinutes = latestHistory ? Math.floor(latestHistory.positionS / 60) : 0;
 
   return (
     <main className="title-detail-page">
@@ -103,10 +124,22 @@ export default async function TitlePage({ params }: TitlePageProps) {
             ))}
           </div>
           <p>{data.title.synopsis}</p>
+          {latestHistory ? (
+            <p className="detail-progress">
+              {latestHistory.episode
+                ? `Ultimo visto: T${latestHistory.episode.season}:E${latestHistory.episode.number} aos ${progressMinutes} min`
+                : `Voce parou em ${progressMinutes} min`}
+            </p>
+          ) : null}
           <div className="hero-actions">
-            {titleAsset ? (
+            {titleAsset || startAsset ? (
               <a className="primary-action" href={`/play/title/${data.title.id}`}>
-                ▶ Assistir
+                ▶ {latestHistory && !latestHistory.completed ? "Continuar" : "Assistir"}
+              </a>
+            ) : null}
+            {latestHistory && startAsset ? (
+              <a className="secondary-action" href={`/watch/${startAsset.id}?start=1`}>
+                Assistir do inicio
               </a>
             ) : null}
             <WatchlistButton
