@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { prisma, TitleStatus, TitleType } from "@movth/db";
+import { prisma, TitleStatus, TitleType, VideoAssetStatus } from "@movth/db";
 import { notFound } from "../lib/api-error.js";
 import { sendData } from "../lib/reply.js";
 
@@ -18,8 +18,14 @@ const titleParamsSchema = z.object({
 
 const searchSchema = z.object({
   q: z.string().trim().min(1),
+  type: z.nativeEnum(TitleType).optional(),
+  genre: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(50).default(20)
+});
+
+const discoveryHomeSchema = z.object({
+  profileId: z.string().uuid().optional()
 });
 
 function titleInclude() {
@@ -104,7 +110,19 @@ export async function catalogRoutes(app: FastifyInstance) {
       title: {
         contains: query.q,
         mode: "insensitive" as const
-      }
+      },
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.genre
+        ? {
+            genres: {
+              some: {
+                genre: {
+                  slug: query.genre
+                }
+              }
+            }
+          }
+        : {})
     };
     const [titles, total] = await Promise.all([
       prisma.title.findMany({
@@ -122,6 +140,173 @@ export async function catalogRoutes(app: FastifyInstance) {
       titles.map(publicTitle),
       { page: query.page, pageSize: query.pageSize, total }
     );
+  });
+
+  app.get("/discovery/home", async (request, reply) => {
+    const query = discoveryHomeSchema.parse(request.query);
+    const readyAssetWhere = {
+      status: VideoAssetStatus.READY
+    };
+    const titleWhereReady = {
+      status: TitleStatus.READY,
+      OR: [
+        {
+          videoAssets: {
+            some: readyAssetWhere
+          }
+        },
+        {
+          episodes: {
+            some: {
+              videoAssets: {
+                some: readyAssetWhere
+              }
+            }
+          }
+        }
+      ]
+    };
+    const [recent, movies, series, genres, watchlist, continueWatching] = await Promise.all([
+      prisma.title.findMany({
+        where: titleWhereReady,
+        include: titleInclude(),
+        orderBy: { createdAt: "desc" },
+        take: 20
+      }),
+      prisma.title.findMany({
+        where: {
+          ...titleWhereReady,
+          type: TitleType.MOVIE
+        },
+        include: titleInclude(),
+        orderBy: { createdAt: "desc" },
+        take: 20
+      }),
+      prisma.title.findMany({
+        where: {
+          ...titleWhereReady,
+          type: TitleType.SERIES
+        },
+        include: titleInclude(),
+        orderBy: { createdAt: "desc" },
+        take: 20
+      }),
+      prisma.genre.findMany({
+        orderBy: { name: "asc" },
+        take: 6
+      }),
+      query.profileId
+        ? prisma.watchlist.findMany({
+            where: { profileId: query.profileId },
+            include: {
+              title: {
+                include: titleInclude()
+              }
+            },
+            orderBy: { createdAt: "desc" },
+            take: 20
+          })
+        : Promise.resolve([]),
+      query.profileId
+        ? prisma.watchHistory.findMany({
+            where: {
+              profileId: query.profileId,
+              completed: false,
+              positionS: { gt: 0 },
+              title: titleWhereReady
+            },
+            include: {
+              title: {
+                include: titleInclude()
+              },
+              episode: true
+            },
+            orderBy: { updatedAt: "desc" },
+            take: 50
+          })
+        : Promise.resolve([])
+    ]);
+    const latestByTitle = new Map<string, (typeof continueWatching)[number]>();
+
+    for (const item of continueWatching) {
+      if (!latestByTitle.has(item.titleId)) {
+        latestByTitle.set(item.titleId, item);
+      }
+    }
+
+    const genreRows = await Promise.all(
+      genres.slice(0, 4).map(async (genre) => {
+        const titles = await prisma.title.findMany({
+          where: {
+            ...titleWhereReady,
+            genres: {
+              some: {
+                genre: {
+                  slug: genre.slug
+                }
+              }
+            }
+          },
+          include: titleInclude(),
+          orderBy: { createdAt: "desc" },
+          take: 12
+        });
+
+        return {
+          genre,
+          titles: titles.map(publicTitle)
+        };
+      })
+    );
+    const popular = Array.from(
+      new Map(
+        [
+          ...Array.from(latestByTitle.values()).map((item) => item.title),
+          ...watchlist.map((item) => item.title),
+          ...recent
+        ].map((title) => [title.id, title])
+      ).values()
+    );
+    const hero =
+      recent.find((title) => title.backdropUrl && title.tmdbId) ??
+      recent.find((title) => title.backdropUrl) ??
+      recent[0] ??
+      null;
+
+    return sendData(reply, {
+      hero: hero ? publicTitle(hero) : null,
+      rows: {
+        continueWatching: Array.from(latestByTitle.values()).slice(0, 20).map((item) => ({
+          id: item.id,
+          profileId: item.profileId,
+          titleId: item.titleId,
+          episodeId: item.episodeId,
+          positionS: item.positionS,
+          completed: item.completed,
+          updatedAt: item.updatedAt,
+          title: publicTitle(item.title),
+          episode: item.episode
+            ? {
+                id: item.episode.id,
+                season: item.episode.season,
+                number: item.episode.number,
+                durationS: item.episode.durationS
+              }
+            : null
+        })),
+        watchlist: watchlist.map((item) => ({
+          profileId: item.profileId,
+          titleId: item.titleId,
+          createdAt: item.createdAt,
+          title: publicTitle(item.title)
+        })),
+        popular: popular.slice(0, 20).map(publicTitle),
+        movies: movies.map(publicTitle),
+        series: series.map(publicTitle),
+        recent: recent.map(publicTitle),
+        genres: genreRows.filter((row) => row.titles.length > 0)
+      }
+    });
   });
 
   app.get("/titles", async (request, reply) => {

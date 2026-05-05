@@ -89,6 +89,22 @@ export type WatchlistItem = {
   title: Title;
 };
 
+export type DiscoveryHomeResponse = {
+  hero: Title | null;
+  rows: {
+    continueWatching: WatchHistoryItem[];
+    watchlist: WatchlistItem[];
+    popular: Title[];
+    movies: Title[];
+    series: Title[];
+    recent: Title[];
+    genres: Array<{
+      genre: Genre;
+      titles: Title[];
+    }>;
+  };
+};
+
 export type Episode = {
   id: string;
   titleId: string;

@@ -851,6 +851,11 @@ button:disabled {
   max-width: 680px;
 }
 
+.detail-progress {
+  color: #ffffff !important;
+  font-weight: 800;
+}
+
 .title-detail-poster {
   aspect-ratio: 2 / 3;
   border: 1px solid rgba(255, 255, 255, 0.16);

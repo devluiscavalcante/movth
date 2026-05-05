@@ -14,6 +14,9 @@ type WatchPageProps = {
   params: {
     assetId: string;
   };
+  searchParams?: {
+    start?: string;
+  };
 };
 
 async function getInitialPosition(profileId: string, watch: WatchResponse) {
@@ -28,7 +31,7 @@ async function getInitialPosition(profileId: string, watch: WatchResponse) {
   return item?.positionS ?? 0;
 }
 
-export default async function WatchPage({ params }: WatchPageProps) {
+export default async function WatchPage({ params, searchParams }: WatchPageProps) {
   await requireUser();
   const profileId = cookies().get(PROFILE_COOKIE)?.value;
 
@@ -56,7 +59,8 @@ export default async function WatchPage({ params }: WatchPageProps) {
     );
   }
 
-  const initialPositionS = await getInitialPosition(profileId, watch.body.data);
+  const initialPositionS =
+    searchParams?.start === "1" ? 0 : await getInitialPosition(profileId, watch.body.data);
 
   return (
     <main className="watch-page watch-player-page">
