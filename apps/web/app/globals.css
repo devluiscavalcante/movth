@@ -490,6 +490,27 @@ button:disabled {
   width: 100%;
 }
 
+.poster-badges {
+  display: flex;
+  gap: 6px;
+  left: 8px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 2;
+}
+
+.poster-badges span {
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 6px 8px;
+}
+
 .poster-actions {
   align-items: center;
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.82));
@@ -546,11 +567,21 @@ button:disabled {
 }
 
 .title-card-copy p,
+.title-card-synopsis,
 .progress-label,
 .empty-state {
   color: var(--muted);
   font-size: 0.88rem;
   margin: 0;
+}
+
+.title-card-synopsis {
+  display: -webkit-box;
+  line-height: 1.35;
+  min-height: 2.4em;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .progress-label {
@@ -892,10 +923,19 @@ button:disabled {
 }
 
 .season-group h3 {
+  align-items: center;
   color: var(--muted);
+  display: flex;
   font-size: 1rem;
+  gap: 10px;
   letter-spacing: 0;
   margin: 0;
+}
+
+.season-group h3 span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .episode-list {
@@ -967,7 +1007,7 @@ button:disabled {
   align-items: end;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(240px, 1fr) minmax(132px, 180px) minmax(150px, 220px) auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(132px, 180px) minmax(150px, 220px) auto auto;
   max-width: 1040px;
 }
 
@@ -993,6 +1033,23 @@ button:disabled {
 .search-form input:focus,
 .search-form select:focus {
   border-color: var(--focus);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.active-filters span {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  padding: 7px 10px;
 }
 
 .search-results {

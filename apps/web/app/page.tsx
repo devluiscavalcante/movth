@@ -7,7 +7,6 @@ import { WatchlistButton } from "./components/WatchlistButton";
 import {
   PROFILE_COOKIE,
   type DiscoveryHomeResponse,
-  type Title,
   type WatchHistoryItem,
   type WatchlistItem,
   requireUser,
@@ -16,7 +15,7 @@ import {
 
 function progressLabel(item: WatchHistoryItem) {
   if (item.episode) {
-    return `T${item.episode.season}:E${item.episode.number} · ${Math.floor(item.positionS / 60)} min`;
+    return `T${item.episode.season}:E${item.episode.number} - ${Math.floor(item.positionS / 60)} min`;
   }
 
   return `${Math.floor(item.positionS / 60)} min assistidos`;
@@ -95,7 +94,7 @@ export default async function HomePage() {
             <div className="hero-actions">
               {heroHasPlayableAsset ? (
                 <a className="primary-action" href={`/play/title/${heroTitle.id}`}>
-                  ▶ Assistir
+                  Play Assistir
                 </a>
               ) : null}
               <WatchlistButton

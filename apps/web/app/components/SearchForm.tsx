@@ -17,6 +17,7 @@ export function SearchForm({ genres = [] }: SearchFormProps) {
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [type, setType] = useState(searchParams.get("type") ?? "");
   const [genre, setGenre] = useState(searchParams.get("genre") ?? "");
+  const hasFilters = Boolean(query || type || genre);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +36,13 @@ export function SearchForm({ genres = [] }: SearchFormProps) {
     }
 
     router.push(`/search${params.toString() ? `?${params.toString()}` : ""}` as Route);
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setType("");
+    setGenre("");
+    router.push("/search" as Route);
   }
 
   return (
@@ -71,6 +79,11 @@ export function SearchForm({ genres = [] }: SearchFormProps) {
       <button className="primary-action" type="submit">
         Buscar
       </button>
+      {hasFilters ? (
+        <button className="secondary-action" onClick={clearFilters} type="button">
+          Limpar
+        </button>
+      ) : null}
     </form>
   );
 }
