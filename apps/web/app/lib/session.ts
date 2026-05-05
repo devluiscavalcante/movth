@@ -163,9 +163,11 @@ export function apiBaseUrl() {
 }
 
 export function cookieOptions(maxAge: number) {
+  const webUrl = process.env.NEXT_PUBLIC_WEB_URL ?? "";
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: webUrl.startsWith("https://"),
     sameSite: "lax" as const,
     path: "/",
     maxAge

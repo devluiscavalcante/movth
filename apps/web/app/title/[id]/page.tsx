@@ -134,7 +134,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
           <div className="hero-actions">
             {titleAsset || startAsset ? (
               <a className="primary-action" href={`/play/title/${data.title.id}`}>
-                ▶ {latestHistory && !latestHistory.completed ? "Continuar" : "Assistir"}
+                Play {latestHistory && !latestHistory.completed ? "Continuar" : "Assistir"}
               </a>
             ) : null}
             {latestHistory && startAsset ? (
@@ -162,7 +162,12 @@ export default async function TitlePage({ params }: TitlePageProps) {
           <div className="season-list">
             {data.seasons.map((season) => (
               <section className="season-group" key={season.season}>
-                <h3>Temporada {season.season}</h3>
+                <h3>
+                  Temporada {season.season}{" "}
+                  <span>
+                    {season.episodes.length} episodio{season.episodes.length === 1 ? "" : "s"}
+                  </span>
+                </h3>
                 <div className="episode-list">
                   {season.episodes.map((episode) => {
                     const asset =
@@ -172,10 +177,15 @@ export default async function TitlePage({ params }: TitlePageProps) {
                     return (
                       <article className="episode-row" key={episode.id}>
                         <div>
-                          <h4>
-                            {episode.number}. Episodio {episode.number}
-                          </h4>
-                          <p>{formatDuration(episode.durationS)}</p>
+                          <h4>Episodio {episode.number}</h4>
+                          <p>
+                            {formatDuration(episode.durationS)}
+                            {episode.videoAssets.length > 0
+                              ? ` - ${episode.videoAssets.length} versao${
+                                  episode.videoAssets.length === 1 ? "" : "es"
+                                }`
+                              : ""}
+                          </p>
                         </div>
                         {asset ? (
                           <a className="secondary-action" href={`/watch/${asset.id}`}>

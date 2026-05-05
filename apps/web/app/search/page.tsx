@@ -83,6 +83,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const results = filterClientSide(titles.body.data ?? [], searchParams);
   const watchlistIds = new Set((watchlist.body.data ?? []).map((item) => item.titleId));
   const query = cleanParam(searchParams.q);
+  const activeType = cleanParam(searchParams.type);
+  const activeGenre = cleanParam(searchParams.genre);
 
   return (
     <main className="search-page">
@@ -101,11 +103,25 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <p className="eyebrow">Busca</p>
         <h1>{query ? `Resultados para "${query}"` : "Explorar catalogo"}</h1>
         <SearchForm genres={genres.body.data ?? []} />
+        {query || activeType || activeGenre ? (
+          <div className="active-filters">
+            {query ? <span>Texto: {query}</span> : null}
+            {activeType ? <span>{activeType === "MOVIE" ? "Filmes" : "Series"}</span> : null}
+            {activeGenre ? (
+              <span>
+                Genero:{" "}
+                {genres.body.data?.find((genre) => genre.slug === activeGenre)?.name ?? activeGenre}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="search-results">
         <div className="section-header">
-          <h2>{results.length} resultado{results.length === 1 ? "" : "s"}</h2>
+          <h2>
+            {results.length} resultado{results.length === 1 ? "" : "s"}
+          </h2>
         </div>
         {results.length > 0 ? (
           <div className="results-grid">
