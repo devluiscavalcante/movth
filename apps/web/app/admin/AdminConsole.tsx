@@ -16,6 +16,12 @@ type AdminEpisode = {
   durationS: number;
 };
 
+type AdminVideoAsset = TitleAsset & {
+  titleId?: string;
+  episodeId?: string | null;
+  hlsManifestUrl?: string;
+};
+
 export type AdminTitle = {
   id: string;
   type: "MOVIE" | "SERIES";
@@ -29,7 +35,7 @@ export type AdminTitle = {
   tmdbId: number | null;
   genres: AdminTitleGenre[];
   episodes: AdminEpisode[];
-  videoAssets: TitleAsset[];
+  videoAssets: AdminVideoAsset[];
 };
 
 type UploadResponse = {
@@ -84,6 +90,44 @@ function statusLabel(status: AdminTitle["status"]) {
   return labels[status];
 }
 
+function playbackLabel(title: AdminTitle) {
+  const readyAssets = title.videoAssets.filter((asset) => asset.status === "READY").length;
+
+  if (title.status === "ARCHIVED") {
+    return "Arquivado";
+  }
+
+  if (readyAssets > 0 && title.status === "READY") {
+    return "Pronto para assistir";
+  }
+
+  if (title.status === "PROCESSING") {
+    return "Transcodificando";
+  }
+
+  return "Requer asset";
+}
+
+function buildAdminTitlesPath(filters: { q: string; type: string; status: string }) {
+  const params = new URLSearchParams({
+    pageSize: "100"
+  });
+
+  if (filters.q.trim()) {
+    params.set("q", filters.q.trim());
+  }
+
+  if (filters.type) {
+    params.set("type", filters.type);
+  }
+
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+
+  return `/api/admin/titles?${params.toString()}`;
+}
+
 async function parseResponse<T>(response: Response) {
   const body = (await response.json().catch(() => ({}))) as ApiEnvelope<T>;
 
@@ -128,17 +172,46 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
   const [upload, setUpload] = useState<UploadResponse | null>(null);
   const [tmdbResults, setTmdbResults] = useState<TmdbSearchItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [filters, setFilters] = useState({
+    q: "",
+    type: "",
+    status: ""
+  });
 
   const selectedTitle = useMemo(
     () => titles.find((title) => title.id === selectedTitleId) ?? titles[0],
     [selectedTitleId, titles]
   );
 
-  async function reloadTitles(nextSelectedId?: string) {
-    const response = await fetch("/api/admin/titles?pageSize=100");
+  async function reloadTitles(nextSelectedId?: string, nextFilters = filters) {
+    const response = await fetch(buildAdminTitlesPath(nextFilters));
     const body = await parseResponse<AdminTitle[]>(response);
     setTitles(body);
     setSelectedTitleId(nextSelectedId ?? body[0]?.id ?? "");
+  }
+
+  async function applyFilters(formData: FormData) {
+    const nextFilters = {
+      q: String(formData.get("q") ?? ""),
+      type: String(formData.get("type") ?? ""),
+      status: String(formData.get("status") ?? "")
+    };
+
+    setFilters(nextFilters);
+    setUpload(null);
+    await reloadTitles(undefined, nextFilters);
+  }
+
+  async function clearFilters() {
+    const nextFilters = {
+      q: "",
+      type: "",
+      status: ""
+    };
+
+    setFilters(nextFilters);
+    setUpload(null);
+    await reloadTitles(undefined, nextFilters);
   }
 
   async function createTitle(formData: FormData) {
@@ -485,8 +558,45 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
           </button>
         </div>
 
+        <form
+          className="admin-filter-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void applyFilters(new FormData(event.currentTarget));
+          }}
+        >
+          <label>
+            Busca
+            <input defaultValue={filters.q} name="q" placeholder="Nome do titulo" />
+          </label>
+          <label>
+            Tipo
+            <select defaultValue={filters.type} name="type">
+              <option value="">Todos</option>
+              <option value="MOVIE">Filmes</option>
+              <option value="SERIES">Series</option>
+            </select>
+          </label>
+          <label>
+            Status
+            <select defaultValue={filters.status} name="status">
+              <option value="">Todos</option>
+              <option value="DRAFT">Rascunho</option>
+              <option value="PROCESSING">Processando</option>
+              <option value="READY">Pronto</option>
+              <option value="ARCHIVED">Arquivado</option>
+            </select>
+          </label>
+          <button className="secondary-action" disabled={busy} type="submit">
+            Filtrar
+          </button>
+          <button className="text-action" disabled={busy} onClick={clearFilters} type="button">
+            Limpar
+          </button>
+        </form>
+
         <div className="admin-table">
-          {titles.map((title) => (
+          {titles.length > 0 ? titles.map((title) => (
             <button
               className={title.id === selectedTitle?.id ? "admin-row is-selected" : "admin-row"}
               key={title.id}
@@ -503,9 +613,12 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
                 </small>
               </span>
               <span>{statusLabel(title.status)}</span>
-              <span>{title.videoAssets.length} asset(s)</span>
+              <span>
+                {title.videoAssets.length} asset(s)
+                <small>{playbackLabel(title)}</small>
+              </span>
             </button>
-          ))}
+          )) : <p className="empty-state">Nenhum titulo encontrado com esses filtros.</p>}
         </div>
       </div>
 
@@ -656,7 +769,43 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
                 <dt>Assets</dt>
                 <dd>{selectedTitle.videoAssets.length}</dd>
               </div>
+              <div>
+                <dt>Playback</dt>
+                <dd>{playbackLabel(selectedTitle)}</dd>
+              </div>
             </dl>
+
+            <div className="admin-asset-list">
+              <div className="panel-heading-row">
+                <div>
+                  <p className="panel-label">Assets</p>
+                  <h2>Disponibilidade</h2>
+                </div>
+                <a className="secondary-action" href={`/title/${selectedTitle.id}`}>
+                  Ver no catalogo
+                </a>
+              </div>
+              {selectedTitle.videoAssets.length > 0 ? (
+                selectedTitle.videoAssets.map((asset) => (
+                  <div className="admin-asset-row" key={asset.id}>
+                    <span>
+                      <strong>{asset.quality}</strong>
+                      <small>{asset.episodeId ? "Episodio" : "Titulo"}</small>
+                    </span>
+                    <span>{asset.status}</span>
+                    {asset.hlsManifestUrl ? (
+                      <a href={asset.hlsManifestUrl} rel="noreferrer" target="_blank">
+                        Manifest
+                      </a>
+                    ) : (
+                      <span>Sem manifest</span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="empty-state">Nenhum asset cadastrado para este titulo.</p>
+              )}
+            </div>
 
             <form
               className="admin-edit-form"
