@@ -11,6 +11,7 @@ const titleParamsSchema = z.object({
 });
 
 const listTitlesQuerySchema = z.object({
+  q: z.string().trim().min(1).optional(),
   type: z.nativeEnum(TitleType).optional(),
   status: z.nativeEnum(TitleStatus).optional(),
   page: z.coerce.number().int().positive().default(1),
@@ -93,6 +94,14 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
   app.get("/titles", async (request, reply) => {
     const query = listTitlesQuerySchema.parse(request.query);
     const where = {
+      ...(query.q
+        ? {
+            title: {
+              contains: query.q,
+              mode: "insensitive" as const
+            }
+          }
+        : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.status ? { status: query.status } : {})
     };
