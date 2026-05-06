@@ -46,6 +46,7 @@ export type Genre = {
 export type TitleAsset = {
   id: string;
   quality: string;
+  source?: "HLS" | "EMBED";
   status: string;
   thumbnailUrl: string | null;
 };
@@ -128,6 +129,7 @@ export type WatchResponse = {
   titleId: string;
   episodeId: string | null;
   quality: string;
+  playbackSource?: "HLS" | "EMBED";
   manifestUrl: string;
   expiresAt: string;
   sessionId: string;

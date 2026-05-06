@@ -21,6 +21,7 @@ const envSchema = z.object({
   WEB_URL: z.string().url().default("http://localhost:3000"),
   TMDB_API_TOKEN: z.string().optional(),
   TMDB_LANGUAGE: z.string().default("pt-BR"),
+  EMBEDMOVIES_BASE_URL: z.string().url().default("https://myembed.biz"),
   DEMO_MOVIE_HLS_URL: z.string().url().default("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
   DEMO_SERIES_HLS_URL: z.string().url().default("https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
 });
