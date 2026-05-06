@@ -14,7 +14,8 @@
     "typecheck": "npm run typecheck -w @movth/types && npm run typecheck -w @movth/db && npm run build -w @movth/types && npm run build -w @movth/db && npm run typecheck -w @movth/api && npm run typecheck -w @movth/web && npm run typecheck -w @movth/worker",
     "db:generate": "npm run db:generate -w @movth/db",
     "db:migrate": "npm run db:migrate -w @movth/db",
-    "db:seed": "npm run db:seed -w @movth/db"
+    "db:seed": "npm run db:seed -w @movth/db",
+    "catalog:import:tmdb": "node --import tsx --import ./apps/api/src/scripts/load-env.ts apps/api/src/scripts/import-tmdb-catalog.ts"
   },
   "devDependencies": {
     "@types/node": "^20.17.10",
