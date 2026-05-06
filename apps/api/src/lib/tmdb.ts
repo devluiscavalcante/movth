@@ -44,6 +44,9 @@ type TmdbTvSearchResult = {
   vote_average: number;
 };
 
+type TmdbMovieDiscoverResult = TmdbMovieSearchResult;
+type TmdbTvDiscoverResult = TmdbTvSearchResult;
+
 export type TmdbGenre = {
   id: number;
   name: string;
@@ -158,6 +161,55 @@ export async function searchTmdb(query: string, type: TmdbMediaType, page: numbe
     query,
     page,
     include_adult: "false"
+  });
+
+  return {
+    page: result.page,
+    total: result.total_results,
+    totalPages: result.total_pages,
+    results: result.results.map<TmdbSearchItem>((item) => ({
+      id: item.id,
+      mediaType: "tv",
+      title: item.name,
+      synopsis: item.overview,
+      releaseYear: releaseYear(item.first_air_date),
+      posterUrl: imageUrl(item.poster_path, "w500"),
+      backdropUrl: imageUrl(item.backdrop_path, "w1280"),
+      voteAverage: item.vote_average
+    }))
+  };
+}
+
+export async function discoverTmdb(type: TmdbMediaType, page: number) {
+  if (type === "movie") {
+    const result = await tmdbFetch<TmdbSearchResponse<TmdbMovieDiscoverResult>>("/discover/movie", {
+      page,
+      include_adult: "false",
+      include_video: "false",
+      sort_by: "popularity.desc"
+    });
+
+    return {
+      page: result.page,
+      total: result.total_results,
+      totalPages: result.total_pages,
+      results: result.results.map<TmdbSearchItem>((item) => ({
+        id: item.id,
+        mediaType: "movie",
+        title: item.title,
+        synopsis: item.overview,
+        releaseYear: releaseYear(item.release_date),
+        posterUrl: imageUrl(item.poster_path, "w500"),
+        backdropUrl: imageUrl(item.backdrop_path, "w1280"),
+        voteAverage: item.vote_average
+      }))
+    };
+  }
+
+  const result = await tmdbFetch<TmdbSearchResponse<TmdbTvDiscoverResult>>("/discover/tv", {
+    page,
+    include_adult: "false",
+    sort_by: "popularity.desc"
   });
 
   return {

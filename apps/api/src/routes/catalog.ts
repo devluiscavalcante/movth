@@ -35,7 +35,12 @@ function titleInclude() {
         genre: true
       }
     },
-    videoAssets: true
+    videoAssets: true,
+    episodes: {
+      include: {
+        videoAssets: true
+      }
+    }
   };
 }
 
@@ -52,7 +57,15 @@ function publicTitle(title: {
   tmdbId: number | null;
   genres: Array<{ genre: { id: string; name: string; slug: string } }>;
   videoAssets?: Array<{ id: string; quality: string; status: string; thumbnailUrl: string | null }>;
+  episodes?: Array<{
+    videoAssets: Array<{ id: string; quality: string; status: string; thumbnailUrl: string | null }>;
+  }>;
 }) {
+  const assets = [
+    ...(title.videoAssets ?? []),
+    ...(title.episodes ?? []).flatMap((episode) => episode.videoAssets)
+  ];
+
   return {
     id: title.id,
     type: title.type,
@@ -65,7 +78,7 @@ function publicTitle(title: {
     backdropUrl: title.backdropUrl,
     tmdbId: title.tmdbId,
     genres: title.genres.map(({ genre }) => genre),
-    assets: title.videoAssets?.map((asset) => ({
+    assets: assets.map((asset) => ({
       id: asset.id,
       quality: asset.quality,
       status: asset.status,
@@ -144,27 +157,8 @@ export async function catalogRoutes(app: FastifyInstance) {
 
   app.get("/discovery/home", async (request, reply) => {
     const query = discoveryHomeSchema.parse(request.query);
-    const readyAssetWhere = {
-      status: VideoAssetStatus.READY
-    };
     const titleWhereReady = {
-      status: TitleStatus.READY,
-      OR: [
-        {
-          videoAssets: {
-            some: readyAssetWhere
-          }
-        },
-        {
-          episodes: {
-            some: {
-              videoAssets: {
-                some: readyAssetWhere
-              }
-            }
-          }
-        }
-      ]
+      status: TitleStatus.READY
     };
     const [recent, movies, series, genres, watchlist, continueWatching] = await Promise.all([
       prisma.title.findMany({
