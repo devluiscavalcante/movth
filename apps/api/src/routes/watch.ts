@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { prisma, TitleType, VideoAssetStatus, VideoQuality } from "@movth/db";
+import { prisma, TitleType, VideoAssetStatus, VideoQuality, VideoSource } from "@movth/db";
 import { badRequest, forbidden, notFound, unauthorized } from "../lib/api-error.js";
 import { sendData } from "../lib/reply.js";
 import { requireActivePlan } from "../middleware/require-active-plan.js";
@@ -77,12 +77,24 @@ async function assertProfileOwner(profileId: string, userId: string) {
   }
 }
 
-function playableAssetFromList<T extends { id: string; status: VideoAssetStatus; quality: VideoQuality }>(
+function playableAssetFromList<T extends { id: string; status: VideoAssetStatus; quality: VideoQuality; source: VideoSource }>(
   assets: T[]
 ) {
   return (
-    assets.find((asset) => asset.status === VideoAssetStatus.READY && asset.quality === VideoQuality.HD) ??
-    assets.find((asset) => asset.status === VideoAssetStatus.READY) ??
+    assets.find(
+      (asset) =>
+        asset.status === VideoAssetStatus.READY &&
+        asset.quality === VideoQuality.HD &&
+        asset.source === VideoSource.HLS
+    ) ??
+    assets.find((asset) => asset.status === VideoAssetStatus.READY && asset.source === VideoSource.HLS) ??
+    assets.find(
+      (asset) =>
+        asset.status === VideoAssetStatus.READY &&
+        asset.quality === VideoQuality.HD &&
+        asset.source === VideoSource.EMBED
+    ) ??
+    assets.find((asset) => asset.status === VideoAssetStatus.READY && asset.source === VideoSource.EMBED) ??
     null
   );
 }
@@ -359,7 +371,7 @@ export async function watchRoutes(app: FastifyInstance) {
         throw notFound("ASSET_NOT_FOUND", "Playable asset not found");
       }
 
-      if (qualityRank(asset.quality) > maxQualityRankForPlan(user.plan)) {
+      if (asset.source === VideoSource.HLS && qualityRank(asset.quality) > maxQualityRankForPlan(user.plan)) {
         throw forbidden("QUALITY_NOT_ALLOWED", "Current plan does not allow this quality");
       }
 
@@ -381,6 +393,7 @@ export async function watchRoutes(app: FastifyInstance) {
         titleId: asset.titleId,
         episodeId: asset.episodeId,
         quality: asset.quality,
+        playbackSource: asset.source,
         manifestUrl: asset.hlsManifestUrl,
         expiresAt,
         sessionId: session.id,

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { EmbedPlayer } from "../../components/EmbedPlayer";
 import { HlsPlayer } from "../../components/HlsPlayer";
 import { LogoutButton } from "../../components/LogoutButton";
 import {
@@ -61,6 +62,34 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
 
   const initialPositionS =
     searchParams?.start === "1" ? 0 : await getInitialPosition(profileId, watch.body.data);
+  const subtitle = watch.body.data.episode
+    ? `T${watch.body.data.episode.season}:E${watch.body.data.episode.number}`
+    : `${watch.body.data.title.releaseYear} - ${watch.body.data.title.rating}`;
+  const nextHref = watch.body.data.nextEpisode ? `/watch/${watch.body.data.nextEpisode.assetId}` : null;
+  const nextLabel = watch.body.data.nextEpisode
+    ? `T${watch.body.data.nextEpisode.season}:E${watch.body.data.nextEpisode.number}`
+    : null;
+
+  if (watch.body.data.playbackSource === "EMBED") {
+    return (
+      <main className="watch-page watch-player-page">
+        <nav className="top-nav watch-nav">
+          <a className="brand-mark" href="/">
+            Movth
+          </a>
+          <LogoutButton />
+        </nav>
+        <EmbedPlayer
+          backHref={`/title/${watch.body.data.titleId}`}
+          embedUrl={watch.body.data.manifestUrl}
+          nextHref={nextHref}
+          nextLabel={nextLabel}
+          subtitle={subtitle}
+          titleLabel={watch.body.data.title.title}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className="watch-page watch-player-page">
@@ -75,20 +104,10 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         episodeId={watch.body.data.episodeId}
         initialPositionS={initialPositionS}
         manifestUrl={watch.body.data.manifestUrl}
-        nextHref={
-          watch.body.data.nextEpisode ? `/watch/${watch.body.data.nextEpisode.assetId}` : null
-        }
-        nextLabel={
-          watch.body.data.nextEpisode
-            ? `T${watch.body.data.nextEpisode.season}:E${watch.body.data.nextEpisode.number}`
-            : null
-        }
+        nextHref={nextHref}
+        nextLabel={nextLabel}
         profileId={profileId}
-        subtitle={
-          watch.body.data.episode
-            ? `T${watch.body.data.episode.season}:E${watch.body.data.episode.number}`
-            : `${watch.body.data.title.releaseYear} - ${watch.body.data.title.rating}`
-        }
+        subtitle={subtitle}
         titleLabel={watch.body.data.title.title}
         titleId={watch.body.data.titleId}
       />

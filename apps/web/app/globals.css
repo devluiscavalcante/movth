@@ -850,6 +850,34 @@ button:disabled {
   height: 100%;
 }
 
+.embed-player-shell {
+  background: #000000;
+  display: grid;
+  min-height: 100vh;
+  position: relative;
+}
+
+.embed-player-shell iframe {
+  border: 0;
+  height: 100vh;
+  width: 100%;
+}
+
+.embed-player-overlay {
+  pointer-events: none;
+}
+
+.embed-player-overlay a {
+  pointer-events: auto;
+}
+
+.embed-next-action {
+  bottom: 24px;
+  position: absolute;
+  right: 28px;
+  z-index: 8;
+}
+
 .title-detail-page {
   background: var(--background);
   min-height: 100vh;

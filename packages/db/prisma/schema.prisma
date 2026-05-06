@@ -27,6 +27,11 @@ enum VideoAssetStatus {
   FAILED
 }
 
+enum VideoSource {
+  HLS
+  EMBED
+}
+
 enum SubscriptionStatus {
   INCOMPLETE
   TRIALING
@@ -178,6 +183,7 @@ model VideoAsset {
   titleId        String           @map("title_id") @db.Uuid
   episodeId      String?          @map("episode_id") @db.Uuid
   quality        VideoQuality
+  source         VideoSource      @default(HLS)
   hlsManifestUrl String           @map("hls_manifest_url")
   thumbnailUrl   String?          @map("thumbnail_url")
   status         VideoAssetStatus @default(PENDING)
@@ -190,7 +196,8 @@ model VideoAsset {
   @@index([titleId])
   @@index([episodeId])
   @@index([status])
-  @@unique([titleId, episodeId, quality])
+  @@index([source])
+  @@unique([titleId, episodeId, quality, source])
   @@map("video_assets")
 }
 

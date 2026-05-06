@@ -13,3 +13,5 @@ export type TranscodeJobPayload = {
   s3Key: string;
   type: "movie" | "episode";
 };
+
+export type PlaybackSource = "HLS" | "EMBED";

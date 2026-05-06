@@ -56,9 +56,9 @@ function publicTitle(title: {
   backdropUrl: string | null;
   tmdbId: number | null;
   genres: Array<{ genre: { id: string; name: string; slug: string } }>;
-  videoAssets?: Array<{ id: string; quality: string; status: string; thumbnailUrl: string | null }>;
+  videoAssets?: Array<{ id: string; quality: string; source: string; status: string; thumbnailUrl: string | null }>;
   episodes?: Array<{
-    videoAssets: Array<{ id: string; quality: string; status: string; thumbnailUrl: string | null }>;
+    videoAssets: Array<{ id: string; quality: string; source: string; status: string; thumbnailUrl: string | null }>;
   }>;
 }) {
   const assets = [
@@ -81,6 +81,7 @@ function publicTitle(title: {
     assets: assets.map((asset) => ({
       id: asset.id,
       quality: asset.quality,
+      source: asset.source,
       status: asset.status,
       thumbnailUrl: asset.thumbnailUrl
     }))
