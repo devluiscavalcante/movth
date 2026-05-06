@@ -45,6 +45,28 @@ function formatDuration(seconds: number) {
   return `${minutes} min`;
 }
 
+function episodeProgress(history: WatchHistoryItem[], episodeId: string, durationS: number) {
+  const item = history.find((entry) => entry.episodeId === episodeId);
+
+  if (!item) {
+    return {
+      item: null,
+      label: null,
+      percent: 0
+    };
+  }
+
+  const percent = item.completed
+    ? 100
+    : Math.min(95, Math.max(0, Math.round((item.positionS / Math.max(1, durationS)) * 100)));
+
+  return {
+    item,
+    label: item.completed ? "Concluido" : `${Math.floor(item.positionS / 60)} min assistidos`,
+    percent
+  };
+}
+
 async function getTitlePageData(titleId: string, profileId: string) {
   const title = await serverApi<Title>(`/titles/${titleId}`);
 
@@ -173,10 +195,11 @@ export default async function TitlePage({ params }: TitlePageProps) {
                     const asset =
                       episode.videoAssets.find((item) => item.status === "READY") ??
                       episode.videoAssets[0];
+                    const progress = episodeProgress(data.history, episode.id, episode.durationS);
 
                     return (
                       <article className="episode-row" key={episode.id}>
-                        <div>
+                        <div className="episode-copy">
                           <h4>Episodio {episode.number}</h4>
                           <p>
                             {formatDuration(episode.durationS)}
@@ -186,11 +209,35 @@ export default async function TitlePage({ params }: TitlePageProps) {
                                 }`
                               : ""}
                           </p>
+                          {progress.label ? (
+                            <div className="episode-progress">
+                              <span>{progress.label}</span>
+                              <div aria-hidden="true">
+                                <i style={{ width: `${progress.percent}%` }} />
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                         {asset ? (
-                          <a className="secondary-action" href={`/watch/${asset.id}`}>
-                            Assistir
-                          </a>
+                          <div className="episode-actions">
+                            <a
+                              className="secondary-action"
+                              href={`/watch/${asset.id}${
+                                progress.item?.completed ? "?start=1" : ""
+                              }`}
+                            >
+                              {progress.item?.completed
+                                ? "Reassistir"
+                                : progress.item
+                                  ? "Continuar"
+                                  : "Assistir"}
+                            </a>
+                            {progress.item && !progress.item.completed ? (
+                              <a className="text-action" href={`/watch/${asset.id}?start=1`}>
+                                Do inicio
+                              </a>
+                            ) : null}
+                          </div>
                         ) : (
                           <span className="episode-unavailable">Indisponivel</span>
                         )}

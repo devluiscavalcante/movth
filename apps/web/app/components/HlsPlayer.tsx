@@ -75,6 +75,8 @@ export function HlsPlayer({
   const [buffering, setBuffering] = useState(true);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [nextCountdown, setNextCountdown] = useState(10);
+  const [nextAutoplayEnabled, setNextAutoplayEnabled] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
 
   const progress = useMemo(() => {
     if (!duration) {
@@ -85,7 +87,8 @@ export function HlsPlayer({
   }, [currentTime, duration]);
 
   const saveProgress = useCallback(async (positionS: number, completed = false) => {
-    await fetch("/api/history", {
+    setSaveStatus("saving");
+    const response = await fetch("/api/history", {
       method: "POST",
       headers: {
         "content-type": "application/json"
@@ -98,6 +101,13 @@ export function HlsPlayer({
         completed
       })
     }).catch(() => undefined);
+
+    if (response?.ok) {
+      setSaveStatus("saved");
+      window.setTimeout(() => setSaveStatus("idle"), 1800);
+    } else {
+      setSaveStatus("idle");
+    }
   }, [episodeId, profileId, titleId]);
 
   useEffect(() => {
@@ -111,6 +121,8 @@ export function HlsPlayer({
     setBuffering(true);
     setLevels([]);
     setSelectedLevel(-1);
+    setEnded(false);
+    setNextAutoplayEnabled(true);
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = manifestUrl;
@@ -161,7 +173,7 @@ export function HlsPlayer({
   }, [muted, volume]);
 
   useEffect(() => {
-    if (!ended || !nextHref) {
+    if (!ended || !nextHref || !nextAutoplayEnabled) {
       return;
     }
 
@@ -179,7 +191,7 @@ export function HlsPlayer({
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [ended, nextHref]);
+  }, [ended, nextAutoplayEnabled, nextHref]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -376,9 +388,14 @@ export function HlsPlayer({
         {error ? (
           <div className="player-error">
             <p>{error}</p>
-            <button className="secondary-action" onClick={retryStream} type="button">
-              Tentar novamente
-            </button>
+            <div className="player-error-actions">
+              <button className="secondary-action" onClick={retryStream} type="button">
+                Tentar novamente
+              </button>
+              <a className="secondary-action" href={backHref}>
+                Voltar ao titulo
+              </a>
+            </div>
           </div>
         ) : null}
         {ended && nextHref ? (
@@ -387,7 +404,20 @@ export function HlsPlayer({
             <a className="primary-action" href={nextHref}>
               Assistir {nextLabel}
             </a>
-            <span>Iniciando em {nextCountdown}s</span>
+            {nextAutoplayEnabled ? (
+              <span>Iniciando em {nextCountdown}s</span>
+            ) : (
+              <span>Autoplay pausado</span>
+            )}
+            {nextAutoplayEnabled ? (
+              <button
+                className="text-action"
+                onClick={() => setNextAutoplayEnabled(false)}
+                type="button"
+              >
+                Cancelar autoplay
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -396,6 +426,9 @@ export function HlsPlayer({
         <button className="control-button" onClick={() => void togglePlay()} type="button">
           {playing ? "Pause" : "Play"}
         </button>
+        <span className="save-status" aria-live="polite">
+          {saveStatus === "saving" ? "Salvando..." : saveStatus === "saved" ? "Salvo" : ""}
+        </span>
         <div className="time-control">
           <span>{formatTime(currentTime)}</span>
           <input
