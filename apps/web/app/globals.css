@@ -728,6 +728,13 @@ button:disabled {
   justify-items: center;
 }
 
+.player-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
 .player-error p {
   margin: 0;
 }
@@ -796,6 +803,13 @@ button:disabled {
   font-weight: 700;
   min-height: 40px;
   padding: 0 12px;
+}
+
+.save-status {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-width: 76px;
 }
 
 .time-control,
@@ -973,6 +987,46 @@ button:disabled {
 .episode-row .secondary-action {
   flex: 0 0 auto;
   min-height: 40px;
+}
+
+.episode-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.episode-progress {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+}
+
+.episode-progress span {
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.episode-progress div {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  height: 4px;
+  overflow: hidden;
+}
+
+.episode-progress i {
+  background: var(--accent);
+  display: block;
+  height: 100%;
+}
+
+.episode-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .search-page {
