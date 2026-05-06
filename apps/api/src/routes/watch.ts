@@ -286,6 +286,29 @@ async function upsertStreamSession(input: {
     }
   }
 
+  const reusableSession = await prisma.activeSession.findFirst({
+    where: {
+      userId: input.userId,
+      deviceType: input.deviceType,
+      ipAddress: input.ipAddress,
+      lastSeen: {
+        gte: activeSince
+      }
+    },
+    orderBy: {
+      lastSeen: "desc"
+    }
+  });
+
+  if (reusableSession) {
+    return prisma.activeSession.update({
+      where: { id: reusableSession.id },
+      data: {
+        lastSeen: new Date()
+      }
+    });
+  }
+
   const activeSessionCount = await prisma.activeSession.count({
     where: {
       userId: input.userId,
