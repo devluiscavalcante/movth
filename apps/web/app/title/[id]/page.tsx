@@ -60,6 +60,26 @@ function availabilityLabel(asset: ReturnType<typeof firstReadyAsset> | ReturnTyp
   return asset ? "Disponivel" : "Em breve";
 }
 
+function detailProgressLabel(input: {
+  history: WatchHistoryItem;
+  progressMinutes: number;
+  isExternal: boolean;
+}) {
+  if (input.history.episode) {
+    if (input.isExternal && input.progressMinutes < 1) {
+      return `Ultimo aberto: T${input.history.episode.season}:E${input.history.episode.number}`;
+    }
+
+    return `Ultimo visto: T${input.history.episode.season}:E${input.history.episode.number} aos ${input.progressMinutes} min`;
+  }
+
+  if (input.isExternal && input.progressMinutes < 1) {
+    return "Iniciado";
+  }
+
+  return `Voce parou em ${input.progressMinutes} min`;
+}
+
 function formatDuration(seconds: number) {
   const minutes = Math.max(1, Math.round(seconds / 60));
   return `${minutes} min`;
@@ -131,6 +151,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
   const latestHistory = data.history.find((item) => !item.completed) ?? data.history[0];
   const progressMinutes = latestHistory ? Math.floor(latestHistory.positionS / 60) : 0;
   const primaryPlayableAsset = startAsset ?? titleAsset;
+  const isExternalPlayback = primaryPlayableAsset?.source === "EMBED";
 
   return (
     <main className="title-detail-page">
@@ -171,12 +192,14 @@ export default async function TitlePage({ params }: TitlePageProps) {
           <p>{data.title.synopsis}</p>
           {latestHistory ? (
             <p className="detail-progress">
-              {latestHistory.episode
-                ? `Ultimo visto: T${latestHistory.episode.season}:E${latestHistory.episode.number} aos ${progressMinutes} min`
-                : `Voce parou em ${progressMinutes} min`}
+              {detailProgressLabel({
+                history: latestHistory,
+                progressMinutes,
+                isExternal: isExternalPlayback
+              })}
             </p>
           ) : null}
-          {primaryPlayableAsset?.source === "EMBED" ? (
+          {isExternalPlayback ? (
             <p className="detail-source-note">
               Reproducao via fonte externa. Qualidade, anuncios e selecao de servidor dependem do
               player incorporado.
