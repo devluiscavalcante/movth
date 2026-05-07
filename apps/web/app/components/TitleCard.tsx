@@ -17,10 +17,29 @@ function shortSynopsis(value: string) {
   return value.length > 116 ? `${value.slice(0, 113).trim()}...` : value;
 }
 
+function readyAssets(title: Title) {
+  return title.assets?.filter((asset) => asset.status === "READY") ?? [];
+}
+
+function sourceLabel(title: Title) {
+  const assets = readyAssets(title);
+
+  if (assets.some((asset) => asset.source === "HLS")) {
+    return "Movth";
+  }
+
+  if (assets.some((asset) => asset.source === "EMBED")) {
+    return "Fonte externa";
+  }
+
+  return "Em breve";
+}
+
 export function TitleCard({ title, profileId, inWatchlist = false, progressLabel }: TitleCardProps) {
   const imageUrl = imageForTitle(title);
-  const hasPlayableAsset = Boolean(title.assets?.some((asset) => asset.status === "READY"));
+  const hasPlayableAsset = readyAssets(title).length > 0;
   const primaryGenre = title.genres[0]?.name;
+  const availabilityLabel = hasPlayableAsset ? "Disponivel" : "Em breve";
 
   return (
     <article className="title-card">
@@ -34,7 +53,8 @@ export function TitleCard({ title, profileId, inWatchlist = false, progressLabel
         </a>
         <div className="poster-badges">
           <span>{title.type === "MOVIE" ? "Filme" : "Serie"}</span>
-          <span>{hasPlayableAsset ? "Pronto" : "Em breve"}</span>
+          <span>{availabilityLabel}</span>
+          {hasPlayableAsset ? <span>{sourceLabel(title)}</span> : null}
         </div>
         <div className="poster-actions">
           {hasPlayableAsset ? (
