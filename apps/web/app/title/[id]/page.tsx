@@ -22,14 +22,22 @@ type TitlePageProps = {
 };
 
 function firstReadyAsset(title: Title) {
-  return title.assets?.find((asset) => asset.status === "READY") ?? title.assets?.[0];
+  return (
+    title.assets?.find((asset) => asset.status === "READY" && asset.source === "HLS") ??
+    title.assets?.find((asset) => asset.status === "READY" && asset.source === "EMBED") ??
+    title.assets?.find((asset) => asset.status === "READY") ??
+    title.assets?.[0]
+  );
 }
 
 function firstEpisodeAsset(seasons: EpisodesResponse["seasons"]) {
   for (const season of seasons) {
     for (const episode of season.episodes) {
       const asset =
-        episode.videoAssets.find((item) => item.status === "READY") ?? episode.videoAssets[0];
+        episode.videoAssets.find((item) => item.status === "READY" && item.source === "HLS") ??
+        episode.videoAssets.find((item) => item.status === "READY" && item.source === "EMBED") ??
+        episode.videoAssets.find((item) => item.status === "READY") ??
+        episode.videoAssets[0];
 
       if (asset) {
         return asset;
@@ -38,6 +46,18 @@ function firstEpisodeAsset(seasons: EpisodesResponse["seasons"]) {
   }
 
   return undefined;
+}
+
+function sourceLabel(asset: ReturnType<typeof firstReadyAsset> | ReturnType<typeof firstEpisodeAsset>) {
+  if (!asset) {
+    return "Em breve";
+  }
+
+  return asset.source === "HLS" ? "Movth" : "Fonte externa";
+}
+
+function availabilityLabel(asset: ReturnType<typeof firstReadyAsset> | ReturnType<typeof firstEpisodeAsset>) {
+  return asset ? "Disponivel" : "Em breve";
 }
 
 function formatDuration(seconds: number) {
@@ -110,6 +130,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
   const inWatchlist = data.watchlist.some((item) => item.titleId === data.title.id);
   const latestHistory = data.history.find((item) => !item.completed) ?? data.history[0];
   const progressMinutes = latestHistory ? Math.floor(latestHistory.positionS / 60) : 0;
+  const primaryPlayableAsset = startAsset ?? titleAsset;
 
   return (
     <main className="title-detail-page">
@@ -141,6 +162,8 @@ export default async function TitlePage({ params }: TitlePageProps) {
           <div className="title-facts">
             <span>{data.title.releaseYear}</span>
             <span>{data.title.rating}</span>
+            <span>{availabilityLabel(primaryPlayableAsset)}</span>
+            {primaryPlayableAsset ? <span>{sourceLabel(primaryPlayableAsset)}</span> : null}
             {data.title.genres.slice(0, 3).map((genre) => (
               <span key={genre.id}>{genre.name}</span>
             ))}
@@ -151,6 +174,12 @@ export default async function TitlePage({ params }: TitlePageProps) {
               {latestHistory.episode
                 ? `Ultimo visto: T${latestHistory.episode.season}:E${latestHistory.episode.number} aos ${progressMinutes} min`
                 : `Voce parou em ${progressMinutes} min`}
+            </p>
+          ) : null}
+          {primaryPlayableAsset?.source === "EMBED" ? (
+            <p className="detail-source-note">
+              Reproducao via fonte externa. Qualidade, anuncios e selecao de servidor dependem do
+              player incorporado.
             </p>
           ) : null}
           <div className="hero-actions">
@@ -193,6 +222,8 @@ export default async function TitlePage({ params }: TitlePageProps) {
                 <div className="episode-list">
                   {season.episodes.map((episode) => {
                     const asset =
+                      episode.videoAssets.find((item) => item.status === "READY" && item.source === "HLS") ??
+                      episode.videoAssets.find((item) => item.status === "READY" && item.source === "EMBED") ??
                       episode.videoAssets.find((item) => item.status === "READY") ??
                       episode.videoAssets[0];
                     const progress = episodeProgress(data.history, episode.id, episode.durationS);
@@ -208,6 +239,7 @@ export default async function TitlePage({ params }: TitlePageProps) {
                                   episode.videoAssets.length === 1 ? "" : "es"
                                 }`
                               : ""}
+                            {asset?.source === "EMBED" ? " - fonte externa" : ""}
                           </p>
                           {progress.label ? (
                             <div className="episode-progress">

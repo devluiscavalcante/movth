@@ -410,6 +410,18 @@ button:disabled {
   padding: 6px 10px;
 }
 
+.detail-source-note {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 18px 0 0;
+  max-width: 680px;
+  padding: 12px 14px;
+}
+
 .hero-actions {
   margin-top: 28px;
 }
