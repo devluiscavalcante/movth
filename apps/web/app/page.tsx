@@ -14,11 +14,24 @@ import {
 } from "./lib/session";
 
 function progressLabel(item: WatchHistoryItem) {
+  const isExternal = item.title.assets?.some(
+    (asset) => asset.status === "READY" && asset.source === "EMBED"
+  );
+  const minutes = Math.floor(item.positionS / 60);
+
   if (item.episode) {
-    return `T${item.episode.season}:E${item.episode.number} - ${Math.floor(item.positionS / 60)} min`;
+    if (isExternal && minutes < 1) {
+      return `T${item.episode.season}:E${item.episode.number} - iniciado`;
+    }
+
+    return `T${item.episode.season}:E${item.episode.number} - ${minutes} min`;
   }
 
-  return `${Math.floor(item.positionS / 60)} min assistidos`;
+  if (isExternal && minutes < 1) {
+    return "Iniciado";
+  }
+
+  return `${minutes} min assistidos`;
 }
 
 function titleIdsFromWatchlist(items: WatchlistItem[]) {
