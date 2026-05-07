@@ -5,6 +5,7 @@ import { HlsPlayer } from "../../components/HlsPlayer";
 import { LogoutButton } from "../../components/LogoutButton";
 import {
   PROFILE_COOKIE,
+  type EpisodesResponse,
   type WatchHistoryItem,
   type WatchResponse,
   requireUser,
@@ -30,6 +31,40 @@ async function getInitialPosition(profileId: string, watch: WatchResponse) {
   );
 
   return item?.positionS ?? 0;
+}
+
+function playableEpisodeAsset(episode: EpisodesResponse["seasons"][number]["episodes"][number]) {
+  return (
+    episode.videoAssets.find((asset) => asset.status === "READY" && asset.source === "EMBED") ??
+    episode.videoAssets.find((asset) => asset.status === "READY") ??
+    null
+  );
+}
+
+async function getEmbedSeasons(watch: WatchResponse) {
+  if (watch.title.type !== "SERIES") {
+    return [];
+  }
+
+  const episodes = await serverApi<EpisodesResponse>(`/titles/${watch.titleId}/episodes`);
+
+  return (
+    episodes.body.data?.seasons.map((season) => ({
+      season: season.season,
+      episodes: season.episodes.map((episode) => {
+        const asset = playableEpisodeAsset(episode);
+
+        return {
+          id: episode.id,
+          season: episode.season,
+          number: episode.number,
+          durationS: episode.durationS,
+          href: asset ? `/watch/${asset.id}` : null,
+          isCurrent: episode.id === watch.episodeId
+        };
+      })
+    })) ?? []
+  );
 }
 
 export default async function WatchPage({ params, searchParams }: WatchPageProps) {
@@ -71,6 +106,8 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
     : null;
 
   if (watch.body.data.playbackSource === "EMBED") {
+    const seasons = await getEmbedSeasons(watch.body.data);
+
     return (
       <main className="watch-page watch-player-page">
         <nav className="top-nav watch-nav">
@@ -82,10 +119,14 @@ export default async function WatchPage({ params, searchParams }: WatchPageProps
         <EmbedPlayer
           backHref={`/title/${watch.body.data.titleId}`}
           embedUrl={watch.body.data.manifestUrl}
+          episodeId={watch.body.data.episodeId}
           nextHref={nextHref}
           nextLabel={nextLabel}
+          profileId={profileId}
+          seasons={seasons}
           subtitle={subtitle}
           titleLabel={watch.body.data.title.title}
+          titleId={watch.body.data.titleId}
         />
       </main>
     );

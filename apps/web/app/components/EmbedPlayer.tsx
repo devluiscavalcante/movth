@@ -1,27 +1,71 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type EmbedPlayerProps = {
   embedUrl: string;
+  profileId: string;
+  titleId: string;
+  episodeId: string | null;
   titleLabel: string;
   subtitle: string;
   backHref: string;
   nextHref: string | null;
   nextLabel: string | null;
+  seasons: ExternalPlayerSeason[];
 };
+
+export type ExternalPlayerEpisode = {
+  id: string;
+  season: number;
+  number: number;
+  durationS: number;
+  href: string | null;
+  isCurrent: boolean;
+};
+
+export type ExternalPlayerSeason = {
+  season: number;
+  episodes: ExternalPlayerEpisode[];
+};
+
+function formatDuration(seconds: number) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return `${minutes} min`;
+}
 
 export function EmbedPlayer({
   embedUrl,
+  profileId,
+  titleId,
+  episodeId,
   titleLabel,
   subtitle,
   backHref,
   nextHref,
-  nextLabel
+  nextLabel,
+  seasons
 }: EmbedPlayerProps) {
   const shellRef = useRef<HTMLElement | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [episodesOpen, setEpisodesOpen] = useState(false);
+
+  useEffect(() => {
+    void fetch("/api/history", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        profileId,
+        titleId,
+        ...(episodeId ? { episodeId } : {}),
+        positionS: 1,
+        completed: false
+      })
+    }).catch(() => undefined);
+  }, [episodeId, profileId, titleId]);
 
   function reloadPlayer() {
     setLoaded(false);
@@ -66,12 +110,66 @@ export function EmbedPlayer({
         <button className="secondary-action" onClick={() => void enterFullscreen()} type="button">
           Tela cheia
         </button>
+        {seasons.length > 0 ? (
+          <button
+            className="secondary-action"
+            onClick={() => setEpisodesOpen((current) => !current)}
+            type="button"
+          >
+            Episodios
+          </button>
+        ) : null}
         {nextHref ? (
           <a className="secondary-action" href={nextHref}>
             Proximo {nextLabel}
           </a>
         ) : null}
       </div>
+      {episodesOpen ? (
+        <aside className="embed-episodes-panel" aria-label="Episodios">
+          <div className="embed-episodes-header">
+            <div>
+              <span>Temporadas</span>
+              <strong>{titleLabel}</strong>
+            </div>
+            <button
+              aria-label="Fechar episodios"
+              className="text-action"
+              onClick={() => setEpisodesOpen(false)}
+              type="button"
+            >
+              Fechar
+            </button>
+          </div>
+          <div className="embed-season-list">
+            {seasons.map((season) => (
+              <section className="embed-season-group" key={season.season}>
+                <h2>Temporada {season.season}</h2>
+                <div className="embed-episode-list">
+                  {season.episodes.map((episode) => (
+                    <a
+                      aria-current={episode.isCurrent ? "page" : undefined}
+                      className={
+                        episode.isCurrent
+                          ? "embed-episode-link is-current"
+                          : "embed-episode-link"
+                      }
+                      href={episode.href ?? "#"}
+                      key={episode.id}
+                    >
+                      <span>E{episode.number}</span>
+                      <div>
+                        <strong>Episodio {episode.number}</strong>
+                        <small>{formatDuration(episode.durationS)}</small>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </aside>
+      ) : null}
     </section>
   );
 }

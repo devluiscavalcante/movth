@@ -938,6 +938,109 @@ button:disabled {
   cursor: pointer;
 }
 
+.embed-episodes-panel {
+  background: rgba(10, 10, 10, 0.96);
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  bottom: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  max-width: min(420px, 100vw);
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  z-index: 12;
+}
+
+.embed-episodes-header {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.embed-episodes-header div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.embed-episodes-header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.embed-episodes-header strong {
+  overflow-wrap: anywhere;
+}
+
+.embed-season-list {
+  overflow: auto;
+  padding: 18px;
+}
+
+.embed-season-group + .embed-season-group {
+  margin-top: 22px;
+}
+
+.embed-season-group h2 {
+  color: var(--muted);
+  font-size: 0.88rem;
+  letter-spacing: 0;
+  margin: 0 0 10px;
+}
+
+.embed-episode-list {
+  display: grid;
+  gap: 8px;
+}
+
+.embed-episode-link {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  min-height: 68px;
+  padding: 10px;
+}
+
+.embed-episode-link.is-current {
+  border-color: rgba(229, 9, 20, 0.74);
+}
+
+.embed-episode-link > span {
+  align-items: center;
+  background: rgba(229, 9, 20, 0.18);
+  border-radius: 6px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 900;
+  height: 44px;
+  justify-content: center;
+}
+
+.embed-episode-link div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.embed-episode-link strong {
+  overflow-wrap: anywhere;
+}
+
+.embed-episode-link small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 @keyframes embedPulse {
   0%,
   100% {
