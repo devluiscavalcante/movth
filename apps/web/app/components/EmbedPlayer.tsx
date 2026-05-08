@@ -47,7 +47,7 @@ export function EmbedPlayer({
   seasons
 }: EmbedPlayerProps) {
   const shellRef = useRef<HTMLElement | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [frameVisible, setFrameVisible] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [episodesOpen, setEpisodesOpen] = useState(false);
 
@@ -67,8 +67,15 @@ export function EmbedPlayer({
     }).catch(() => undefined);
   }, [episodeId, profileId, titleId]);
 
+  useEffect(() => {
+    setFrameVisible(false);
+    const fallbackTimer = window.setTimeout(() => setFrameVisible(true), 1800);
+
+    return () => window.clearTimeout(fallbackTimer);
+  }, [embedUrl, reloadKey]);
+
   function reloadPlayer() {
-    setLoaded(false);
+    setFrameVisible(false);
     setReloadKey((current) => current + 1);
   }
 
@@ -85,19 +92,22 @@ export function EmbedPlayer({
           <span>{subtitle}</span>
         </div>
       </div>
-      {!loaded ? (
+      {!frameVisible ? (
         <div className="embed-loading-panel" aria-live="polite">
           <span className="embed-loading-mark" aria-hidden="true" />
           <p>Carregando player externo</p>
+          <button className="secondary-action" onClick={() => setFrameVisible(true)} type="button">
+            Mostrar player
+          </button>
         </div>
       ) : null}
       <iframe
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
-        className={loaded ? "is-loaded" : ""}
+        className={frameVisible ? "is-loaded" : ""}
         key={reloadKey}
         loading="eager"
-        onLoad={() => setLoaded(true)}
+        onLoad={() => setFrameVisible(true)}
         referrerPolicy="no-referrer"
         src={embedUrl}
         title={`Player - ${titleLabel}`}
