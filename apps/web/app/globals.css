@@ -954,6 +954,36 @@ button:disabled {
   cursor: pointer;
 }
 
+.embed-fallback-panel {
+  background: rgba(10, 10, 10, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  left: 50%;
+  max-width: min(420px, calc(100vw - 28px));
+  padding: 16px;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  z-index: 7;
+}
+
+.embed-fallback-panel p {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.embed-fallback-panel div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
 .embed-episodes-panel {
   background: rgba(10, 10, 10, 0.96);
   border-left: 1px solid rgba(255, 255, 255, 0.16);

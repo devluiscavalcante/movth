@@ -48,6 +48,7 @@ export function EmbedPlayer({
 }: EmbedPlayerProps) {
   const shellRef = useRef<HTMLElement | null>(null);
   const [frameVisible, setFrameVisible] = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [episodesOpen, setEpisodesOpen] = useState(false);
 
@@ -69,9 +70,14 @@ export function EmbedPlayer({
 
   useEffect(() => {
     setFrameVisible(false);
+    setSlowLoad(false);
     const fallbackTimer = window.setTimeout(() => setFrameVisible(true), 1800);
+    const slowLoadTimer = window.setTimeout(() => setSlowLoad(true), 5200);
 
-    return () => window.clearTimeout(fallbackTimer);
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(slowLoadTimer);
+    };
   }, [embedUrl, reloadKey]);
 
   function reloadPlayer() {
@@ -112,8 +118,25 @@ export function EmbedPlayer({
         src={embedUrl}
         title={`Player - ${titleLabel}`}
       />
+      {slowLoad ? (
+        <div className="embed-fallback-panel" aria-live="polite">
+          <strong>Player externo sem resposta</strong>
+          <p>O provedor pode bloquear iframe, demorar para carregar ou exigir abertura direta.</p>
+          <div>
+            <button className="secondary-action" onClick={reloadPlayer} type="button">
+              Recarregar
+            </button>
+            <a className="secondary-action" href={embedUrl} rel="noreferrer" target="_blank">
+              Abrir fonte
+            </a>
+          </div>
+        </div>
+      ) : null}
       <div className="embed-player-controls">
         <span>Fonte externa</span>
+        <a className="secondary-action" href={embedUrl} rel="noreferrer" target="_blank">
+          Abrir fonte
+        </a>
         <button className="secondary-action" onClick={reloadPlayer} type="button">
           Recarregar
         </button>
