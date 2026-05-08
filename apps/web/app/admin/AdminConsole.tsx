@@ -14,6 +14,7 @@ type AdminEpisode = {
   season: number;
   number: number;
   durationS: number;
+  videoAssets?: AdminVideoAsset[];
 };
 
 type AdminVideoAsset = TitleAsset & {
@@ -91,14 +92,18 @@ function statusLabel(status: AdminTitle["status"]) {
 }
 
 function playbackLabel(title: AdminTitle) {
-  const readyAssets = title.videoAssets.filter((asset) => asset.status === "READY").length;
+  const readyAssets = allVideoAssets(title).filter((asset) => asset.status === "READY");
 
   if (title.status === "ARCHIVED") {
     return "Arquivado";
   }
 
-  if (readyAssets > 0 && title.status === "READY") {
-    return "Pronto para assistir";
+  if (readyAssets.some((asset) => asset.source === "HLS") && title.status === "READY") {
+    return "Movth";
+  }
+
+  if (readyAssets.some((asset) => asset.source === "EMBED") && title.status === "READY") {
+    return "Fonte externa";
   }
 
   if (title.status === "PROCESSING") {
@@ -108,7 +113,43 @@ function playbackLabel(title: AdminTitle) {
   return "Requer asset";
 }
 
-function buildAdminTitlesPath(filters: { q: string; type: string; status: string }) {
+function allVideoAssets(title: AdminTitle) {
+  return [
+    ...title.videoAssets,
+    ...title.episodes.flatMap((episode) => episode.videoAssets ?? [])
+  ];
+}
+
+function playbackSummary(title: AdminTitle) {
+  const assets = allVideoAssets(title);
+  const ready = assets.filter((asset) => asset.status === "READY");
+
+  return {
+    total: assets.length,
+    ready: ready.length,
+    hls: ready.filter((asset) => asset.source === "HLS").length,
+    embed: ready.filter((asset) => asset.source === "EMBED").length,
+    missing: ready.length === 0
+  };
+}
+
+function coverageSummary(titles: AdminTitle[]) {
+  return {
+    hls: titles.filter((title) => playbackSummary(title).hls > 0).length,
+    embed: titles.filter((title) => playbackSummary(title).embed > 0).length,
+    missing: titles.filter((title) => playbackSummary(title).missing).length
+  };
+}
+
+function sourceLabel(source: AdminVideoAsset["source"]) {
+  if (!source) {
+    return "Origem indefinida";
+  }
+
+  return source === "HLS" ? "Movth" : "Fonte externa";
+}
+
+function buildAdminTitlesPath(filters: { q: string; type: string; status: string; playback: string }) {
   const params = new URLSearchParams({
     pageSize: "100"
   });
@@ -123,6 +164,10 @@ function buildAdminTitlesPath(filters: { q: string; type: string; status: string
 
   if (filters.status) {
     params.set("status", filters.status);
+  }
+
+  if (filters.playback) {
+    params.set("playback", filters.playback);
   }
 
   return `/api/admin/titles?${params.toString()}`;
@@ -175,7 +220,8 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
   const [filters, setFilters] = useState({
     q: "",
     type: "",
-    status: ""
+    status: "",
+    playback: ""
   });
 
   const selectedTitle = useMemo(
@@ -194,7 +240,8 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
     const nextFilters = {
       q: String(formData.get("q") ?? ""),
       type: String(formData.get("type") ?? ""),
-      status: String(formData.get("status") ?? "")
+      status: String(formData.get("status") ?? ""),
+      playback: String(formData.get("playback") ?? "")
     };
 
     setFilters(nextFilters);
@@ -206,13 +253,16 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
     const nextFilters = {
       q: "",
       type: "",
-      status: ""
+      status: "",
+      playback: ""
     };
 
     setFilters(nextFilters);
     setUpload(null);
     await reloadTitles(undefined, nextFilters);
   }
+
+  const currentCoverage = coverageSummary(titles);
 
   async function createTitle(formData: FormData) {
     setBusy(true);
@@ -587,6 +637,15 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
               <option value="ARCHIVED">Arquivado</option>
             </select>
           </label>
+          <label>
+            Playback
+            <select defaultValue={filters.playback} name="playback">
+              <option value="">Todos</option>
+              <option value="HLS">Movth</option>
+              <option value="EMBED">Fonte externa</option>
+              <option value="MISSING">Sem playback</option>
+            </select>
+          </label>
           <button className="secondary-action" disabled={busy} type="submit">
             Filtrar
           </button>
@@ -594,6 +653,12 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
             Limpar
           </button>
         </form>
+
+        <div className="admin-coverage-strip">
+          <span>Movth: {currentCoverage.hls}</span>
+          <span>Fonte externa: {currentCoverage.embed}</span>
+          <span>Sem playback: {currentCoverage.missing}</span>
+        </div>
 
         <div className="admin-table">
           {titles.length > 0 ? titles.map((title) => (
@@ -614,7 +679,7 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
               </span>
               <span>{statusLabel(title.status)}</span>
               <span>
-                {title.videoAssets.length} asset(s)
+                {playbackSummary(title).total} asset(s)
                 <small>{playbackLabel(title)}</small>
               </span>
             </button>
@@ -767,11 +832,19 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
               </div>
               <div>
                 <dt>Assets</dt>
-                <dd>{selectedTitle.videoAssets.length}</dd>
+                <dd>{playbackSummary(selectedTitle).total}</dd>
               </div>
               <div>
                 <dt>Playback</dt>
                 <dd>{playbackLabel(selectedTitle)}</dd>
+              </div>
+              <div>
+                <dt>Movth</dt>
+                <dd>{playbackSummary(selectedTitle).hls}</dd>
+              </div>
+              <div>
+                <dt>Fonte externa</dt>
+                <dd>{playbackSummary(selectedTitle).embed}</dd>
               </div>
             </dl>
 
@@ -785,17 +858,20 @@ export function AdminConsole({ genres, initialTitles }: AdminConsoleProps) {
                   Ver no catalogo
                 </a>
               </div>
-              {selectedTitle.videoAssets.length > 0 ? (
-                selectedTitle.videoAssets.map((asset) => (
+              {allVideoAssets(selectedTitle).length > 0 ? (
+                allVideoAssets(selectedTitle).map((asset) => (
                   <div className="admin-asset-row" key={asset.id}>
                     <span>
                       <strong>{asset.quality}</strong>
                       <small>{asset.episodeId ? "Episodio" : "Titulo"}</small>
                     </span>
-                    <span>{asset.status}</span>
+                    <span>
+                      {asset.status}
+                      <small>{sourceLabel(asset.source)}</small>
+                    </span>
                     {asset.hlsManifestUrl ? (
                       <a href={asset.hlsManifestUrl} rel="noreferrer" target="_blank">
-                        Manifest
+                        Abrir origem
                       </a>
                     ) : (
                       <span>Sem manifest</span>

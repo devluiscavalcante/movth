@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { prisma, TitleStatus, TitleType } from "@movth/db";
+import { prisma, TitleStatus, TitleType, VideoAssetStatus, VideoSource } from "@movth/db";
 import { conflict, notFound } from "../lib/api-error.js";
 import { sendCreated, sendData, sendNoContent } from "../lib/reply.js";
 import { requireAdmin } from "../middleware/require-admin.js";
@@ -14,6 +14,7 @@ const listTitlesQuerySchema = z.object({
   q: z.string().trim().min(1).optional(),
   type: z.nativeEnum(TitleType).optional(),
   status: z.nativeEnum(TitleStatus).optional(),
+  playback: z.enum(["HLS", "EMBED", "MISSING"]).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50)
 });
@@ -82,8 +83,70 @@ function titleInclude() {
         genre: true
       }
     },
-    episodes: true,
+    episodes: {
+      include: {
+        videoAssets: true
+      },
+      orderBy: [{ season: "asc" as const }, { number: "asc" as const }]
+    },
     videoAssets: true
+  };
+}
+
+function readyAssetWhere(source?: VideoSource) {
+  return {
+    status: VideoAssetStatus.READY,
+    ...(source ? { source } : {})
+  };
+}
+
+function playbackWhere(playback: z.infer<typeof listTitlesQuerySchema>["playback"]) {
+  if (!playback) {
+    return {};
+  }
+
+  if (playback === "MISSING") {
+    return {
+      NOT: {
+        OR: [
+          {
+            videoAssets: {
+              some: readyAssetWhere()
+            }
+          },
+          {
+            episodes: {
+              some: {
+                videoAssets: {
+                  some: readyAssetWhere()
+                }
+              }
+            }
+          }
+        ]
+      }
+    };
+  }
+
+  const source = playback === "HLS" ? VideoSource.HLS : VideoSource.EMBED;
+
+  return {
+    OR: [
+      {
+        videoAssets: {
+          some: readyAssetWhere(source)
+        }
+      },
+      {
+        episodes: {
+          some: {
+            videoAssets: {
+              some: readyAssetWhere(source)
+            }
+          }
+        }
+      }
+    ]
   };
 }
 
@@ -103,7 +166,8 @@ export async function adminCatalogRoutes(app: FastifyInstance) {
           }
         : {}),
       ...(query.type ? { type: query.type } : {}),
-      ...(query.status ? { status: query.status } : {})
+      ...(query.status ? { status: query.status } : {}),
+      ...playbackWhere(query.playback)
     };
     const skip = (query.page - 1) * query.pageSize;
     const [titles, total] = await Promise.all([
