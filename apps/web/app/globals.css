@@ -906,6 +906,10 @@ button:disabled {
   z-index: 5;
 }
 
+.embed-loading-panel .secondary-action {
+  min-width: 150px;
+}
+
 .embed-loading-panel p {
   color: var(--muted);
   font-weight: 800;
@@ -934,7 +938,7 @@ button:disabled {
   left: 0;
   padding: 70px 28px 24px;
   position: absolute;
-  right: 28px;
+  right: 0;
   z-index: 8;
 }
 
